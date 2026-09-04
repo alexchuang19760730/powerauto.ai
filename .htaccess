@@ -1,0 +1,50 @@
+# PowerAuto.ai - GoDaddy / Apache 优化
+
+# 开启 gzip
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json text/xml application/xml image/svg+xml
+</IfModule>
+
+# 缓存静态资源
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css                "access plus 1 month"
+  ExpiresByType application/javascript   "access plus 1 month"
+  ExpiresByType image/png                "access plus 1 year"
+  ExpiresByType image/jpg                "access plus 1 year"
+  ExpiresByType image/jpeg               "access plus 1 year"
+  ExpiresByType image/gif                "access plus 1 year"
+  ExpiresByType image/svg+xml            "access plus 1 year"
+  ExpiresByType image/webp               "access plus 1 year"
+  ExpiresByType image/x-icon             "access plus 1 year"
+  ExpiresByType text/html                "access plus 1 hour"
+</IfModule>
+
+# 默认首页
+DirectoryIndex index.php index.html
+
+# 美化 URL(可选): /index.php -> /
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# 安全:禁止访问敏感文件
+<FilesMatch "^(\.env|\.htaccess|\.htpasswd|composer\.json|composer\.lock|README\.md)$">
+  Require all denied
+</FilesMatch>
+
+# 安全:禁止访问 admin/.env.php
+<Files "env.php">
+  Require all denied
+</Files>
+
+# 禁止目录列表
+Options -Indexes
+
+# HTTPS 强制(GoDaddy SSL 启用后取消下一行注释)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# 自定义错误页(可选)
+# ErrorDocument 404 /404.html
+# ErrorDocument 500 /500.html

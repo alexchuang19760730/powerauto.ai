@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /config.php
+
+Sitemap: https://powerauto.ai/sitemap.xml

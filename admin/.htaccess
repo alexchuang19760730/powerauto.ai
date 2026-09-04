@@ -1,0 +1,7 @@
+# 额外保护 admin 目录:禁止外部直接读取 .env.php
+<Files "env.php">
+  Require all denied
+</Files>
+<Files "*.md">
+  Require all denied
+</Files>

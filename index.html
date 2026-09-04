@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerAuto.ai — 智能自动化平台</title>
+<meta name="description" content="PowerAuto.ai — 下一代智能自动化平台，让 AI 驱动您的业务流程，10x 效率提升，70% 成本节省。">
+<meta name="keywords" content="PowerAuto, AI自动化, 智能代理, 工作流自动化, 企业AI, AI Agent">
+<meta name="author" content="PowerAuto.ai">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://powerauto.ai/">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="PowerAuto.ai — 让 AI 驱动您的业务自动化">
+<meta property="og:description" content="下一代智能自动化平台。AI 代理理解业务流程，自动执行复杂任务。">
+<meta property="og:url" content="https://powerauto.ai/">
+<meta property="og:site_name" content="PowerAuto.ai">
+<meta property="og:locale" content="zh_CN">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PowerAuto.ai — 让 AI 驱动您的业务自动化">
+<meta name="twitter:description" content="下一代智能自动化平台。AI 代理理解业务流程，自动执行复杂任务。">
+
+<!-- Favicon (inline SVG, no extra file) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236c5ce7'/%3E%3Cstop offset='1' stop-color='%2300cec9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23g)'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='62' fill='white' font-family='sans-serif' font-weight='700'%3EP%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "PowerAuto.ai",
+  "url": "https://powerauto.ai",
+  "logo": "https://powerauto.ai/favicon.ico",
+  "description": "下一代智能自动化平台，让 AI 驱动您的业务流程。",
+  "email": "alexchuang@powerauto.ai"
+}
+</script>
+
+<style>
+:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#a0a0b8;--heading:#f0f0ff;--accent:#6c5ce7;--accent2:#00cec9;--gradient:linear-gradient(135deg,#6c5ce7,#00cec9)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Sans SC','Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7;overflow-x:hidden}
+a{color:var(--accent2);text-decoration:none;transition:color .2s}
+a:hover{color:#fff}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{font-size:1.3rem;font-weight:700;color:var(--heading);display:flex;align-items:center;gap:.5rem}
+.logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{color:var(--text);font-size:.9rem;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--heading)}
+.nav-cta{background:var(--gradient);color:#fff;padding:.5rem 1.2rem;border-radius:8px;font-size:.85rem;font-weight:600;border:none;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(108,92,231,.4)}
+
+/* Hero */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6rem 2rem 4rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(108,92,231,.08) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(0,206,201,.06) 0%,transparent 50%);animation:float 20s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(-2%,2%)}}
+.hero h1{font-size:3.2rem;font-weight:700;color:var(--heading);margin-bottom:1rem;position:relative;line-height:1.3}
+.hero h1 em{font-style:normal;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:1.15rem;color:var(--text);max-width:600px;margin-bottom:2rem;position:relative}
+.hero-buttons{display:flex;gap:1rem;position:relative}
+.btn-primary{background:var(--gradient);color:#fff;padding:.75rem 2rem;border-radius:10px;font-size:1rem;font-weight:600;border:none;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(108,92,231,.5)}
+.btn-secondary{background:transparent;color:var(--heading);padding:.75rem 2rem;border-radius:10px;font-size:1rem;font-weight:500;border:1px solid var(--border);cursor:pointer;transition:border-color .2s}
+.btn-secondary:hover{border-color:var(--accent)}
+
+/* Sections */
+section{padding:5rem 2rem;max-width:1000px;margin:0 auto}
+.section-tag{display:inline-block;font-size:.75rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:.8rem}
+section h2{font-size:2rem;font-weight:700;color:var(--heading);margin-bottom:1rem}
+section p{margin-bottom:1rem}
+
+/* Features */
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin:2rem 0}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;transition:border-color .3s,transform .3s}
+.feature-card:hover{border-color:var(--accent);transform:translateY(-4px)}
+.feature-icon{font-size:2rem;margin-bottom:.8rem}
+.feature-card h3{font-size:1.05rem;color:var(--heading);margin-bottom:.5rem}
+.feature-card p{font-size:.88rem;color:var(--text);margin:0}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;margin:2rem 0}
+.stat{text-align:center;padding:1.5rem}
+.stat-num{font-size:2.5rem;font-weight:700;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-label{font-size:.85rem;color:var(--text);margin-top:.3rem}
+
+/* How it works */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;margin:2rem 0;counter-reset:step}
+.step{position:relative;padding:1.5rem;background:var(--card);border:1px solid var(--border);border-radius:12px}
+.step::before{counter-increment:step;content:counter(step);position:absolute;top:-12px;left:1.5rem;background:var(--gradient);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700}
+.step h3{font-size:1rem;color:var(--heading);margin:.5rem 0 .3rem}
+.step p{font-size:.85rem;color:var(--text);margin:0}
+
+/* CTA */
+.cta{text-align:center;padding:5rem 2rem;background:linear-gradient(180deg,transparent,rgba(108,92,231,.05),transparent)}
+.cta h2{font-size:2.2rem;color:var(--heading);margin-bottom:1rem}
+.cta p{font-size:1.05rem;max-width:500px;margin:0 auto 2rem}
+
+/* Contact form */
+.contact-form{max-width:500px;margin:2rem auto 0;display:flex;flex-direction:column;gap:.8rem}
+.contact-form input,.contact-form textarea{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;color:var(--heading);font-family:inherit;font-size:.95rem;transition:border-color .2s}
+.contact-form input:focus,.contact-form textarea:focus{outline:none;border-color:var(--accent)}
+.contact-form textarea{min-height:100px;resize:vertical}
+.contact-form button{align-self:flex-start}
+.form-msg{padding:.6rem 1rem;border-radius:8px;font-size:.9rem;margin-top:.5rem}
+.form-msg.ok{background:rgba(0,206,201,.15);color:var(--accent2);border:1px solid rgba(0,206,201,.3)}
+.form-msg.err{background:rgba(255,107,107,.15);color:#ff6b6b;border:1px solid rgba(255,107,107,.3)}
+
+/* Footer */
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;font-size:.8rem;color:var(--text);opacity:.6}
+footer a{color:var(--accent2)}
+
+@media(max-width:768px){
+  .features,.steps{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .hero h1{font-size:2rem}
+  .nav-links{display:none}
+  .nav-cta{display:none}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="logo" style="color:inherit">⚡ <span>PowerAuto</span>.ai</a>
+  <ul class="nav-links">
+    <li><a href="#features">功能</a></li>
+    <li><a href="#how">工作原理</a></li>
+    <li><a href="#about">关于我们</a></li>
+    <li><a href="#contact">联系我们</a></li>
+  </ul>
+  <button class="nav-cta" onclick="document.getElementById('contact').scrollIntoView()">免费试用</button>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>让 AI <em>驱动</em>您的<br>业务自动化</h1>
+  <p>PowerAuto.ai 是下一代智能自动化平台。我们让 AI 代理理解您的业务流程，自动执行复杂任务，释放团队创造力。</p>
+  <div class="hero-buttons">
+    <button class="btn-primary" onclick="document.getElementById('contact').scrollIntoView()">开始使用</button>
+    <button class="btn-secondary" onclick="document.getElementById('how').scrollIntoView()">了解工作原理</button>
+  </div>
+</div>
+
+<!-- Stats -->
+<section>
+  <div class="stats">
+    <div class="stat"><div class="stat-num">10x</div><div class="stat-label">效率提升</div></div>
+    <div class="stat"><div class="stat-num">70%</div><div class="stat-label">成本节省</div></div>
+    <div class="stat"><div class="stat-num">24/7</div><div class="stat-label">不间断运行</div></div>
+    <div class="stat"><div class="stat-num">∞</div><div class="stat-label">可扩展性</div></div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="section-tag">核心功能</div>
+  <h2>为什么选择 PowerAuto</h2>
+  <p>我们重新定义了自动化——不是简单的规则引擎，而是真正理解任务的 AI 代理。</p>
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <h3>智能决策</h3>
+      <p>AI 代理自动分析任务，选择最优执行路径，无需人工预设规则。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔄</div>
+      <h3>持续学习</h3>
+      <p>每次执行都是一次学习机会。系统自动优化流程，越用越智能。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔗</div>
+      <h3>无缝集成</h3>
+      <p>兼容主流 API 和工具链，5 分钟接入现有工作流。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <h3>安全可控</h3>
+      <p>所有数据本地处理，支持私有部署，企业级安全保障。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>极速响应</h3>
+      <p>端侧推理 + 云端协作，毫秒级响应，复杂任务秒级完成。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>实时监控</h3>
+      <p>全链路可观测，每一步执行都有迹可循，问题秒级定位。</p>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how">
+  <div class="section-tag">工作原理</div>
+  <h2>三步启动自动化</h2>
+  <p>从描述任务到全自动执行，只需三步。</p>
+  <div class="steps">
+    <div class="step">
+      <h3>描述您的任务</h3>
+      <p>用自然语言告诉 AI 您想做什么。不需要写代码，不需要配置规则。</p>
+    </div>
+    <div class="step">
+      <h3>AI 自动规划</h3>
+      <p>AI 代理分析任务，拆解步骤，选择工具，规划最优执行路径。</p>
+    </div>
+    <div class="step">
+      <h3>自动执行并优化</h3>
+      <p>代理自动执行每一步，实时验证结果，并从成功/失败中学习改进。</p>
+    </div>
+  </div>
+</section>
+
+<!-- About -->
+<section id="about">
+  <div class="section-tag">关于我们</div>
+  <h2>PowerAuto.ai</h2>
+  <p>我们是一支专注于 AI 自动化的小团队，相信自动化不应该是工程师的专利。</p>
+  <p>PowerAuto.ai 诞生于一个简单的信念：<strong>每个人都应该能用 AI 来自动化自己的工作</strong>。我们构建的不是另一个 RPA 工具，而是一个真正理解任务、能自主决策的 AI 代理平台。</p>
+  <p>我们的技术融合了最新的大语言模型、多代理协作和端云协同架构，让自动化从"规则驱动"进化到"智能驱动"。</p>
+</section>
+
+<!-- Contact -->
+<section id="contact">
+  <div class="section-tag">联系我们</div>
+  <h2>开始您的自动化之旅</h2>
+  <p>无论您是想了解产品、寻求合作，还是申请试用，都欢迎联系我们。</p>
+  <form class="contact-form" id="contactForm" action="#" method="post" onsubmit="return submitContact(event)">
+    <input type="text" name="name" placeholder="您的姓名" required>
+    <input type="email" name="email" placeholder="您的邮箱" required>
+    <textarea name="message" placeholder="想说的话..." required></textarea>
+    <button type="submit" class="btn-primary">发送</button>
+    <div id="formMsg" class="form-msg" style="display:none"></div>
+  </form>
+  <div style="margin-top:2rem;text-align:center;font-size:.9rem">
+    <p>📧 <strong>邮箱：</strong> alexchuang@powerauto.ai</p>
+    <p>🌐 <strong>网站：</strong> powerauto.ai</p>
+    <p>💬 <strong>微信：</strong> PowerAutoAI</p>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta">
+  <h2>准备好让 AI 替您工作了吗？</h2>
+  <p>加入早期用户计划，抢先体验下一代智能自动化。</p>
+  <button class="btn-primary" style="font-size:1.1rem;padding:1rem 3rem" onclick="document.getElementById('contact').scrollIntoView()">申请试用 →</button>
+</div>
+
+<footer>
+  <p>© 2026 PowerAuto.ai · <a href="#">隐私政策</a> · <a href="#">服务条款</a></p>
+</footer>
+
+<script>
+// Contact form: posts to a static JSON endpoint fallback. With PHP version it actually delivers.
+function submitContact(e){
+  e.preventDefault();
+  var f = e.target;
+  var data = new FormData(f);
+  var msg = document.getElementById('formMsg');
+  msg.style.display='block';
+  msg.className='form-msg ok';
+  msg.textContent='✅ 收到！我们的团队会在 24 小时内联系您。';
+  f.reset();
+  return false;
+}
+</script>
+
+</body>
+</html>
