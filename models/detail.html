@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模型详情 — PowerAuto Models</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg2:#0f0f18;--card:#14141f;--card2:#1a1a28;--border:#1e1e30;--border2:#2a2a40;--text:#8888a0;--text2:#a0a0b8;--heading:#f0f0ff;--accent:#6c5ce7;--accent2:#00cec9;--accent3:#fd79a8;--gradient:linear-gradient(135deg,#6c5ce7,#00cec9);--success:#00b894;--warning:#fdcb6e;--radius:12px;--shadow:0 4px 24px rgba(0,0,0,.3)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans SC','Inter',system-ui,sans-serif;background:var(--bg);color:var(--text2);line-height:1.6}
+a{color:var(--accent2);text-decoration:none}a:hover{color:#fff}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{font-size:1.2rem;font-weight:700;color:var(--heading);display:flex;align-items:center;gap:.5rem;text-decoration:none}
+.logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:1.5rem;list-style:none;align-items:center}
+.nav-links a{color:var(--text);font-size:.85rem;font-weight:500}.nav-links a:hover,.nav-links a.active{color:var(--heading)}
+.btn-sm{padding:.4rem 1rem;border-radius:8px;font-size:.8rem;font-weight:600;border:none;cursor:pointer;transition:all .2s}
+.btn-gradient{background:var(--gradient);color:#fff}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.container{max-width:900px;margin:0 auto;padding:5rem 2rem 3rem}
+.model-header{display:flex;gap:1.5rem;align-items:flex-start;margin-bottom:2rem}
+.model-icon-lg{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0}
+.model-icon-lg.qwen{background:linear-gradient(135deg,#667eea,#764ba2)}
+.model-icon-lg.ornith{background:linear-gradient(135deg,#f093fb,#f5576c)}
+.model-icon-lg.gemma{background:linear-gradient(135deg,#4facfe,#00f2fe)}
+.model-icon-lg.deepseek{background:linear-gradient(135deg,#43e97b,#38f9d7)}
+.model-icon-lg.minimax{background:linear-gradient(135deg,#fa709a,#fee140)}
+.model-icon-lg.llama{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
+.model-title{font-size:1.8rem;font-weight:800;color:var(--heading);margin-bottom:.3rem}
+.model-subtitle{font-size:.9rem;color:var(--text)}
+.badge{padding:.2rem .6rem;border-radius:4px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-right:.3rem}
+.badge-mtp{background:rgba(108,92,231,.2);color:var(--accent)}
+.badge-q4{background:rgba(0,206,201,.2);color:var(--accent2)}
+.badge-iq3{background:rgba(253,121,168,.2);color:var(--accent3)}
+.badge-free{background:rgba(0,184,148,.2);color:var(--success)}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.5rem 0}
+.info-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;text-align:center}
+.info-card .label{font-size:.75rem;color:var(--text);margin-bottom:.3rem}
+.info-card .value{font-size:1.1rem;font-weight:700;color:var(--heading)}
+.section{margin:2rem 0}
+.section h3{font-size:1.1rem;font-weight:700;color:var(--heading);margin-bottom:.8rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+.section p,.section li{font-size:.9rem;line-height:1.7}
+.section ul{list-style:none;padding:0}
+.section li{padding:.3rem 0;padding-left:1.2rem;position:relative}
+.section li::before{content:'›';position:absolute;left:0;color:var(--accent);font-weight:700}
+.code-block{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent2);overflow-x:auto;margin:.8rem 0;position:relative}
+.code-block .lang{position:absolute;top:.5rem;right:.8rem;font-size:.65rem;color:var(--text);text-transform:uppercase}
+.btn-lg{display:inline-block;padding:.7rem 2rem;border-radius:10px;font-size:.95rem;font-weight:600;border:none;cursor:pointer;transition:all .2s;text-decoration:none}
+.btn-primary{background:var(--gradient);color:#fff}.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(108,92,231,.4);color:#fff}
+.btn-outline{background:transparent;color:var(--heading);border:1px solid var(--border)}.btn-outline:hover{border-color:var(--accent);color:var(--heading)}
+.action-bar{display:flex;gap:1rem;margin:2rem 0;flex-wrap:wrap}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;font-size:.8rem;color:var(--text);opacity:.6;margin-top:3rem}
+@media(max-width:768px){.info-grid{grid-template-columns:1fr}.model-header{flex-direction:column}.nav-links{display:none}}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">⚡ <span>PowerAuto</span>.ai</a>
+  <ul class="nav-links">
+    <li><a href="index.html">模型市场</a></li>
+    <li><a href="../playground/index.html">在线试用</a></li>
+    <li><a href="#">API 文档</a></li>
+  </ul>
+  <div><button class="btn-sm btn-ghost">登录</button> <button class="btn-sm btn-gradient">注册</button></div>
+</nav>
+
+<div class="container" id="content">
+  <p style="color:var(--text)">加载中...</p>
+</div>
+
+<footer>
+  <p>© 2026 PowerAuto.ai · <a href="#">隐私政策</a> · <a href="#">服务条款</a></p>
+</footer>
+
+<script>
+const MODELS=[
+{id:"qwen36-35b-a3b-mtp",name:"Qwen3.6-35B-A3B-MTP",family:"qwen",icon:"🧠",desc:"通义千问 3.6 35B MoE 模型，3B 激活参数，支持 MTP 投机解码，端侧 25+ tok/s 稳定推理。",params:"35B (3B active)",quant:"IQ3_XXS / IQ4_XS",size:"11-14 GB",context:"32K",license:"Apache 2.0",tags:["mtp","iq3","free"],hf:"Alexchuang/cgcengine-models",cloud:true,
+features:["256 个专家，每次激活 3B 参数","MTP (Multi-Token Prediction) 投机解码","Expert Cache L4 零拷贝预加载","支持 llama.cpp / vLLM / Ollama 部署","CGC Engine 端云协同推理"],
+code:"# Ollama\nollama run alexchuang/qwen36-35b-a3b-mtp\n\n# llama.cpp\n./llama-speculative-simple -m models/Qwen3.6-35B-A3B-MTP-UD-IQ3_XXS.gguf --spec-type draft-mtp -n 256\n\n# CGC Engine (端云协同)\npython edge_server.py --model models/Qwen3.6-35B-A3B-MTP-UD-IQ3_XXS.gguf --ngl 99 --port 8080"},
+{id:"qwen36-35b-a3b-denseiq4x",name:"Qwen3.6-35B-A3B-DenseIQ4X",family:"qwen",icon:"🧠",desc:"Qwen3.6 35B 高精度量化版本，DenseIQ4X 编码，head Q6K 复原，质量最优的端侧部署方案。",params:"35B (3B active)",quant:"DenseIQ4X",size:"13.6 GB",context:"32K",license:"Apache 2.0",tags:["mtp","q4","free"],hf:"Alexchuang/cgcengine-models",cloud:true,
+features:["DenseIQ4X 高精度量化，质量接近 FP16","Head Q6K 复原，输出质量提升 15%","Mac M4 实测 12-14 tok/s (MTP 90% accept rate)","n_ctx=8192，支持长上下文推理","Expert Cache 99.7% hit rate"],
+code:"# Mac M4 部署\n./scripts/run_n30cache.sh -m qwen36 --mtp 3 --dense-iq4x --server-api\n\n# Windows 端连接\ncurl http://192.168.101.90:8080/v1/chat/completions \\\n  -d '{\"model\":\"local\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}'"},
+{id:"ornith15-35b-a3b-iq3",name:"Ornith-1.5-35B-A3B-IQ3_XXS",family:"ornith",icon:"🦅",desc:"Ornith 1.5 35B MoE 量化版，代码与智能体能力超越原生 Qwen3.6，Agent 场景首选。",params:"35B (3B active)",quant:"IQ3_XXS",size:"13.7 GB",context:"32K",license:"Apache 2.0",tags:["mtp","iq3","free"],hf:"Alexchuang/cgcengine-models",cloud:true,
+features:["基于 Qwen3.6 架构，权重替换为 Ornith-1.5","代码生成能力显著优于原生 Qwen3.6","Agent 工具调用准确率提升 20%","支持 MTP 投机解码加速","同量化级别下质量最优"],
+code:"# 下载\nhuggingface-cli download Alexchuang/cgcengine-models/Ornith-1.5-35B-A3B-IQ3_XXS.gguf\n\n# 部署\n./llama-speculative-simple -m Ornith-1.5-35B-A3B-IQ3_XXS.gguf --spec-type draft-mtp -n 256"},
+{id:"deepseek-v4-flash",name:"DeepSeek-V4-Flash",family:"deepseek",icon:"🔮",desc:"DeepSeek V4 Flash 轻量版，671B MoE 架构，37B 激活，推理速度极快，适合云端部署。",params:"671B (37B active)",quant:"FP8 / Q4_K_M",size:"335-670 GB",context:"128K",license:"MIT",tags:["cloud","free"],hf:"deepseek-ai/DeepSeek-V4-Flash",cloud:true,
+features:["671B 总参数，37B 激活，极高推理效率","128K 超长上下文窗口","多语言能力突出（中英日韩）","支持 function calling 和 structured output","云端 API 免费试用"],
+code:"# vLLM 部署\nvllm serve deepseek-ai/DeepSeek-V4-Flash --tensor-parallel-size 8\n\n# API 调用\ncurl http://localhost:8000/v1/chat/completions \\\n  -d '{\"model\":\"DeepSeek-V4-Flash\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}'"},
+{id:"gemma4-27b",name:"Gemma4-27B",family:"gemma",icon:"💎",desc:"Google Gemma 4 27B，多模态理解能力强，支持图文输入，适合视觉问答与文档分析。",params:"27B",quant:"Q4_K_M / Q8_0",size:"16-28 GB",context:"128K",license:"Gemma License",tags:["q4","free"],hf:"google/gemma-4-27b",cloud:true,
+features:["多模态：文本 + 图像输入","128K 上下文窗口","Google TPU 训练，质量保证","支持 LoRA 微调","端侧 Q4 量化可跑"],
+code:"# Ollama\nollama run gemma4:27b\n\n# HuggingFace\nfrom transformers import AutoModelForCausalLM\nmodel = AutoModelForCausalLM.from_pretrained('google/gemma-4-27b')"},
+];
+
+const params=new URLSearchParams(window.location.search);
+const id=params.get('id');
+const model=MODELS.find(m=>m.id===id)||MODELS[0];
+
+document.title=model.name+' — PowerAuto Models';
+
+document.getElementById('content').innerHTML=`
+<a href="index.html" style="color:var(--text);font-size:.85rem;display:inline-block;margin-bottom:1rem">← 返回模型市场</a>
+<div class="model-header">
+  <div class="model-icon-lg ${model.family}">${model.icon}</div>
+  <div>
+    <div class="model-title">${model.name}</div>
+    <div class="model-subtitle">${model.desc}</div>
+    <div style="margin-top:.5rem">${model.tags.map(t=>'<span class="badge badge-'+t+'">'+t.toUpperCase()+'</span>').join('')}</div>
+  </div>
+</div>
+
+<div class="info-grid">
+  <div class="info-card"><div class="label">参数量</div><div class="value">${model.params}</div></div>
+  <div class="info-card"><div class="label">量化格式</div><div class="value">${model.quant}</div></div>
+  <div class="info-card"><div class="label">文件大小</div><div class="value">${model.size}</div></div>
+  <div class="info-card"><div class="label">上下文长度</div><div class="value">${model.context}</div></div>
+  <div class="info-card"><div class="label">许可证</div><div class="value">${model.license}</div></div>
+  <div class="info-card"><div class="label">来源</div><div class="value" style="font-size:.8rem">${model.hf}</div></div>
+</div>
+
+<div class="action-bar">
+  ${model.cloud ? '<a href="../playground/index.html?id='+model.id+'" class="btn-lg btn-primary">🎮 在线试用</a>' : ''}
+  <a href="https://huggingface.co/${model.hf}" class="btn-lg btn-outline" target="_blank">📥 从 HuggingFace 下载</a>
+  <a href="#" class="btn-lg btn-outline">📋 复制 API 地址</a>
+</div>
+
+<div class="section">
+  <h3>✨ 核心特性</h3>
+  <ul>${model.features.map(f=>'<li>'+f+'</li>').join('')}</ul>
+</div>
+
+<div class="section">
+  <h3>🚀 快速开始</h3>
+  <div class="code-block"><span class="lang">bash</span><pre>${model.code}</pre></div>
+</div>
+
+<div class="section">
+  <h3>📡 API 调用</h3>
+  <div class="code-block"><span class="lang">python</span><pre>from openai import OpenAI
+
+client = OpenAI(
+    api_key="dummy",
+    base_url="http://192.168.101.90:8080/v1",  # Mac M4 服务
+)
+
+response = client.chat.completions.create(
+    model="local",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "用一句话介绍你自己。"}
+    ],
+    max_tokens=128,
+    temperature=0.7,
+)
+print(response.choices[0].message.content)</pre></div>
+</div>
+`;
+</script>
+</body>
+</html>

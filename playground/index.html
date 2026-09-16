@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>在线试用 — PowerAuto Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg2:#0f0f18;--card:#14141f;--card2:#1a1a28;--border:#1e1e30;--border2:#2a2a40;--text:#8888a0;--text2:#a0a0b8;--heading:#f0f0ff;--accent:#6c5ce7;--accent2:#00cec9;--gradient:linear-gradient(135deg,#6c5ce7,#00cec9);--success:#00b894;--radius:12px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans SC','Inter',system-ui,sans-serif;background:var(--bg);color:var(--text2);line-height:1.6;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+a{color:var(--accent2);text-decoration:none}a:hover{color:#fff}
+
+/* Top bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar .logo{font-size:1rem;font-weight:700;color:var(--heading);display:flex;align-items:center;gap:.4rem;text-decoration:none}
+.topbar .logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar-center{display:flex;align-items:center;gap:.8rem}
+.topbar-center select{background:var(--card2);color:var(--heading);border:1px solid var(--border);border-radius:8px;padding:.3rem .8rem;font-size:.8rem;outline:none;cursor:pointer}
+.topbar-center select:focus{border-color:var(--accent)}
+.topbar-right{display:flex;align-items:center;gap:.8rem}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.status-dot.online{background:var(--success);box-shadow:0 0 8px var(--success)}
+.status-dot.offline{background:#e17055}
+.status-text{font-size:.75rem;color:var(--text)}
+
+/* Main layout */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:260px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:1rem;border-bottom:1px solid var(--border)}
+.sidebar-header h3{font-size:.85rem;color:var(--heading);margin-bottom:.5rem}
+.server-input{display:flex;gap:.4rem}
+.server-input input{flex:1;background:var(--bg);color:var(--heading);border:1px solid var(--border);border-radius:6px;padding:.35rem .6rem;font-size:.75rem;font-family:'JetBrains Mono',monospace;outline:none}
+.server-input input:focus{border-color:var(--accent)}
+.server-input button{background:var(--gradient);color:#fff;border:none;border-radius:6px;padding:.35rem .8rem;font-size:.75rem;cursor:pointer;white-space:nowrap}
+.sidebar-section{padding:1rem;border-bottom:1px solid var(--border)}
+.sidebar-section h4{font-size:.75rem;color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem}
+.param-row{display:flex;justify-content:space-between;align-items:center;margin:.4rem 0}
+.param-row label{font-size:.8rem;color:var(--text2)}
+.param-row input[type=range]{width:120px;accent-color:var(--accent)}
+.param-row .val{font-size:.75rem;color:var(--accent2);min-width:30px;text-align:right;font-family:'JetBrains Mono',monospace}
+.param-row select{background:var(--card2);color:var(--heading);border:1px solid var(--border);border-radius:4px;padding:.2rem .4rem;font-size:.75rem;outline:none}
+.sidebar-footer{margin-top:auto;padding:1rem;border-top:1px solid var(--border)}
+.btn-full{width:100%;padding:.5rem;border-radius:8px;font-size:.85rem;font-weight:600;border:none;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--gradient);color:#fff}.btn-primary:hover{box-shadow:0 4px 16px rgba(108,92,231,.4)}
+.btn-danger{background:transparent;color:#e17055;border:1px solid #e1705533}.btn-danger:hover{background:#e1705520}
+.new-chat{background:var(--card2);color:var(--text2);border:1px solid var(--border);margin-bottom:.5rem}
+
+/* Chat area */
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.messages{flex:1;overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+.msg{max-width:80%;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{align-self:flex-end}
+.msg.assistant{align-self:flex-start}
+.msg-bubble{padding:.8rem 1.2rem;border-radius:12px;font-size:.9rem;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.msg.user .msg-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.msg.assistant .msg-bubble{background:var(--card);color:var(--text2);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg-meta{font-size:.65rem;color:var(--text);margin-top:.2rem;padding:0 .3rem}
+.msg.user .msg-meta{text-align:right}
+.typing{display:flex;gap:4px;padding:.8rem 1.2rem}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:typing 1.4s infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,60%,100%{opacity:.3;transform:scale(.8)}30%{opacity:1;transform:scale(1)}}
+
+/* Welcome */
+.welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}
+.welcome h2{font-size:1.5rem;color:var(--heading);margin-bottom:.5rem}
+.welcome p{font-size:.9rem;color:var(--text);max-width:500px;margin-bottom:1.5rem}
+.quick-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+.quick-btn{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.5rem 1rem;font-size:.8rem;color:var(--text2);cursor:pointer;transition:all .2s}
+.quick-btn:hover{border-color:var(--accent);color:var(--heading)}
+
+/* Input */
+.input-area{padding:1rem 1.5rem;border-top:1px solid var(--border);background:var(--card)}
+.input-wrapper{display:flex;gap:.5rem;align-items:flex-end;max-width:800px;margin:0 auto}
+.input-wrapper textarea{flex:1;background:var(--bg);color:var(--heading);border:1px solid var(--border);border-radius:10px;padding:.6rem 1rem;font-size:.9rem;font-family:inherit;resize:none;outline:none;max-height:120px;line-height:1.5}
+.input-wrapper textarea:focus{border-color:var(--accent)}
+.input-wrapper textarea::placeholder{color:var(--text)}
+.send-btn{background:var(--gradient);color:#fff;border:none;border-radius:10px;width:42px;height:42px;font-size:1.1rem;cursor:pointer;transition:all .2s;flex-shrink:0}
+.send-btn:hover{transform:scale(1.05);box-shadow:0 4px 16px rgba(108,92,231,.4)}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.input-hint{font-size:.7rem;color:var(--text);text-align:center;margin-top:.4rem;max-width:800px;margin-left:auto;margin-right:auto}
+
+/* Token stats */
+.token-stats{display:flex;gap:1rem;justify-content:center;padding:.3rem;font-size:.7rem;color:var(--text)}
+.token-stats span{display:flex;align-items:center;gap:.3rem}
+
+@media(max-width:768px){.sidebar{display:none}.msg{max-width:95%}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="logo">⚡ <span>PowerAuto</span></a>
+  <div class="topbar-center">
+    <span id="statusDot" class="status-dot offline"></span>
+    <span id="statusText" class="status-text">未连接</span>
+    <select id="modelSelect">
+      <option value="local">local (默认)</option>
+      <option value="qwen36-35b">Qwen3.6-35B</option>
+      <option value="ornith15-35b">Ornith-1.5-35B</option>
+    </select>
+  </div>
+  <div class="topbar-right">
+    <a href="../models/index.html" style="font-size:.8rem">模型市场</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h3>🔗 服务连接</h3>
+      <div class="server-input">
+        <input type="text" id="serverUrl" value="http://192.168.101.90:8080" placeholder="Mac 服务地址">
+        <button onclick="checkHealth()">连接</button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h4>⚙️ 生成参数</h4>
+      <div class="param-row">
+        <label>Temperature</label>
+        <input type="range" id="temp" min="0" max="2" step="0.1" value="0.7" oninput="document.getElementById('tempVal').textContent=this.value">
+        <span class="val" id="tempVal">0.7</span>
+      </div>
+      <div class="param-row">
+        <label>Max Tokens</label>
+        <input type="range" id="maxTokens" min="16" max="4096" step="16" value="512" oninput="document.getElementById('maxVal').textContent=this.value">
+        <span class="val" id="maxVal">512</span>
+      </div>
+      <div class="param-row">
+        <label>Top P</label>
+        <input type="range" id="topP" min="0" max="1" step="0.05" value="0.9" oninput="document.getElementById('topPVal').textContent=this.value">
+        <span class="val" id="topPVal">0.9</span>
+      </div>
+      <div class="param-row">
+        <label>Stream</label>
+        <select id="streamMode">
+          <option value="true">开启</option>
+          <option value="false">关闭</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h4>📝 System Prompt</h4>
+      <textarea id="systemPrompt" style="width:100%;background:var(--bg);color:var(--heading);border:1px solid var(--border);border-radius:6px;padding:.4rem;font-size:.75rem;height:60px;resize:vertical;outline:none;font-family:inherit" placeholder="You are a helpful assistant.">You are a helpful assistant.</textarea>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="btn-full new-chat" onclick="newChat()">+ 新对话</button>
+      <button class="btn-full btn-danger" onclick="clearChat()">🗑️ 清空对话</button>
+    </div>
+  </div>
+
+  <div class="chat-area">
+    <div class="messages" id="messages">
+      <div class="welcome">
+        <h2>🎮 PowerAuto Playground</h2>
+        <p>连接你的 Mac M4 推理服务，实时体验大模型对话。</p>
+        <div class="quick-actions">
+          <button class="quick-btn" onclick="sendQuick('用一句话介绍你自己')">👋 自我介绍</button>
+          <button class="quick-btn" onclick="sendQuick('写一个 Python 快速排序算法')">💻 写代码</button>
+          <button class="quick-btn" onclick="sendQuick('解释什么是 MoE 架构')">📚 解释概念</button>
+          <button class="quick-btn" onclick="sendQuick('帮我写一封商务邮件')">✉️ 写邮件</button>
+          <button class="quick-btn" onclick="sendQuick('1+1等于几？')">🧮 算数</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="token-stats" id="tokenStats" style="display:none">
+      <span>⏱️ <span id="statTime">0s</span></span>
+      <span>📊 <span id="statTps">0</span> tok/s</span>
+      <span>📥 <span id="statPrompt">0</span> prompt</span>
+      <span>📤 <span id="statCompletion">0</span> completion</span>
+      <span>🎯 <span id="statCached">0</span> cached</span>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrapper">
+        <textarea id="userInput" rows="1" placeholder="输入消息... (Enter 发送, Shift+Enter 换行)" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">▶</button>
+      </div>
+      <div class="input-hint">连接 Mac M4 服务 · Qwen3.6-35B-MTP · MTP 投机解码加速</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let messages = [];
+let isGenerating = false;
+let serverUrl = 'http://192.168.101.90:8080';
+
+// Auto-resize textarea
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+async function checkHealth() {
+  serverUrl = document.getElementById('serverUrl').value.replace(/\/$/, '');
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  try {
+    const r = await fetch(serverUrl + '/health', { signal: AbortSignal.timeout(5000) });
+    const j = await r.json();
+    if (j.status === 'ok' || j.ok) {
+      dot.className = 'status-dot online';
+      text.textContent = '已连接';
+      // Also fetch models
+      try {
+        const mr = await fetch(serverUrl + '/v1/models');
+        const mj = await mr.json();
+        const sel = document.getElementById('modelSelect');
+        const models = mj.data || mj.models || [];
+        sel.innerHTML = models.map(m => `<option value="${m.id || m.name}">${m.id || m.name}</option>`).join('');
+      } catch(e) {}
+    } else {
+      dot.className = 'status-dot offline';
+      text.textContent = '服务异常';
+    }
+  } catch(e) {
+    dot.className = 'status-dot offline';
+    text.textContent = '连接失败';
+  }
+}
+
+function addMessage(role, content, meta) {
+  const welcome = document.querySelector('.welcome');
+  if (welcome) welcome.remove();
+
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.innerHTML = `<div class="msg-bubble">${escapeHtml(content)}</div>${meta ? `<div class="msg-meta">${meta}</div>` : ''}`;
+  document.getElementById('messages').appendChild(div);
+  scrollToBottom();
+  return div;
+}
+
+function addTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.id = 'typingMsg';
+  div.innerHTML = '<div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+  document.getElementById('messages').appendChild(div);
+  scrollToBottom();
+  return div;
+}
+
+function scrollToBottom() {
+  const m = document.getElementById('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function newChat() {
+  messages = [];
+  document.getElementById('messages').innerHTML = `
+    <div class="welcome">
+      <h2>🎮 PowerAuto Playground</h2>
+      <p>连接你的 Mac M4 推理服务，实时体验大模型对话。</p>
+      <div class="quick-actions">
+        <button class="quick-btn" onclick="sendQuick('用一句话介绍你自己')">👋 自我介绍</button>
+        <button class="quick-btn" onclick="sendQuick('写一个 Python 快速排序算法')">💻 写代码</button>
+        <button class="quick-btn" onclick="sendQuick('解释什么是 MoE 架构')">📚 解释概念</button>
+      </div>
+    </div>`;
+  document.getElementById('tokenStats').style.display = 'none';
+}
+
+function clearChat() { newChat(); }
+
+function sendQuick(text) {
+  document.getElementById('userInput').value = text;
+  sendMessage();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || isGenerating) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  isGenerating = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  addMessage('user', text);
+  messages.push({ role: 'user', content: text });
+
+  const typingDiv = addTyping();
+
+  const systemPrompt = document.getElementById('systemPrompt').value;
+  const fullMessages = [
+    { role: 'system', content: systemPrompt },
+    ...messages
+  ];
+
+  const body = {
+    model: document.getElementById('modelSelect').value,
+    messages: fullMessages,
+    max_tokens: parseInt(document.getElementById('maxTokens').value),
+    temperature: parseFloat(document.getElementById('temp').value),
+    top_p: parseFloat(document.getElementById('topP').value),
+    stream: document.getElementById('streamMode').value === 'true'
+  };
+
+  const t0 = Date.now();
+
+  try {
+    if (body.stream) {
+      // SSE streaming
+      const resp = await fetch(serverUrl + '/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
+
+      typingDiv.querySelector('.msg-bubble').innerHTML = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') break;
+            try {
+              const j = JSON.parse(data);
+              const delta = j.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullText += delta;
+                typingDiv.querySelector('.msg-bubble').textContent = fullText;
+                scrollToBottom();
+              }
+            } catch(e) {}
+          }
+        }
+      }
+
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+      const tokCount = fullText.split(/\s+/).length * 1.3;
+      const tps = (tokCount / elapsed).toFixed(1);
+      typingDiv.querySelector('.msg-meta')?.remove();
+      const meta = document.createElement('div');
+      meta.className = 'msg-meta';
+      meta.textContent = `${elapsed}s · ~${tps} tok/s`;
+      typingDiv.appendChild(meta);
+      messages.push({ role: 'assistant', content: fullText });
+
+    } else {
+      // Non-streaming
+      const resp = await fetch(serverUrl + '/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, stream: false })
+      });
+      const j = await resp.json();
+      const content = j.choices?.[0]?.message?.content || '(空响应)';
+      const usage = j.usage || {};
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+      const tps = usage.completion_tokens ? (usage.completion_tokens / elapsed).toFixed(1) : '?';
+
+      typingDiv.remove();
+      addMessage('assistant', content, `${elapsed}s · ${tps} tok/s · ${usage.completion_tokens || '?'} tokens`);
+
+      document.getElementById('tokenStats').style.display = 'flex';
+      document.getElementById('statTime').textContent = elapsed + 's';
+      document.getElementById('statTps').textContent = tps;
+      document.getElementById('statPrompt').textContent = usage.prompt_tokens || '?';
+      document.getElementById('statCompletion').textContent = usage.completion_tokens || '?';
+      document.getElementById('statCached').textContent = usage.prompt_tokens_details?.cached_tokens || 0;
+
+      messages.push({ role: 'assistant', content });
+    }
+  } catch(e) {
+    typingDiv.remove();
+    addMessage('assistant', `❌ 连接失败: ${e.message}\n\n请确认 Mac 服务已启动，地址正确。`);
+  }
+
+  isGenerating = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+// Auto-check health on load
+setTimeout(checkHealth, 500);
+</script>
+</body>
+</html>
