@@ -389,9 +389,8 @@ async function sendCloud(typingDiv, fullMessages, t0) {
   const headers = { 'Content-Type': 'application/json' };
   if (HF_TOKEN) headers['Authorization'] = 'Bearer ' + HF_TOKEN;
   
-  // Use CORS proxy for HF Inference API
-  const PROXY_URL = 'https://corsproxy.io/?url=' + encodeURIComponent(API_URL);
-  const resp = await fetch(PROXY_URL, {
+  // HF Inference API supports CORS when token is provided
+  const resp = await fetch(API_URL, {
     method: 'POST',
     headers: headers,
     body: JSON.stringify(payload),
