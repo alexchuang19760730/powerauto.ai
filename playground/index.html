@@ -104,6 +104,11 @@ a{color:var(--accent2);text-decoration:none}a:hover{color:#fff}
   <div class="sidebar">
     <div class="sidebar-header">
       <h3>🔗 推理后端</h3>
+      <div style="margin-bottom:.5rem">
+        <input type="password" id="hfTokenInput" placeholder="HF Token (可选, 提高速度)" 
+               style="width:100%;background:var(--bg);color:var(--heading);border:1px solid var(--border);border-radius:6px;padding:.35rem .6rem;font-size:.75rem;outline:none"
+               onchange="localStorage.setItem('hf_token',this.value)">
+      </div>
       <div class="backend-tabs">
         <button class="backend-tab active" onclick="switchBackend('cloud',this)">☁️ 云端免费</button>
         <button class="backend-tab" onclick="switchBackend('local',this)">💻 本地服务</button>
@@ -379,9 +384,16 @@ async function sendCloud(typingDiv, fullMessages, t0) {
     }
   };
 
-  const resp = await fetch(API_URL, {
+  // HF Inference API requires auth token
+  const HF_TOKEN = localStorage.getItem('hf_token') || '';
+  const headers = { 'Content-Type': 'application/json' };
+  if (HF_TOKEN) headers['Authorization'] = 'Bearer ' + HF_TOKEN;
+  
+  // Use CORS proxy for HF Inference API
+  const PROXY_URL = 'https://corsproxy.io/?url=' + encodeURIComponent(API_URL);
+  const resp = await fetch(PROXY_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: headers,
     body: JSON.stringify(payload),
   });
 
