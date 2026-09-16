@@ -365,58 +365,46 @@ async function sendMessage() {
   input.focus();
 }
 
-// ============ Cloud (HuggingFace Inference API) ============
+// ============ Cloud (via Cloudflare Worker proxy - no CORS, no user token) ============
+const CLOUD_WORKER_URL = 'https://powerauto-inference.powerauto-ai.workers.dev';
 async function sendCloud(typingDiv, fullMessages, t0) {
   const modelId = selectedCloudModel;
   const maxTokens = parseInt(document.getElementById('maxTokens').value);
   const temperature = parseFloat(document.getElementById('temp').value);
 
-  // HuggingFace Inference API (free tier)
-  const API_URL = `https://api-inference.huggingface.co/models/${modelId}`;
+  // Route through Cloudflare Worker proxy (HF token stored server-side)
+  const API_URL = CLOUD_WORKER_URL + '/v1/chat/completions';
 
   const payload = {
-    inputs: formatMessages(fullMessages),
-    parameters: {
-      max_new_tokens: maxTokens,
-      temperature: temperature,
-      top_p: parseFloat(document.getElementById('topP').value),
-      return_full_text: false,
-    }
+    model: modelId,
+    messages: fullMessages.map(m => ({ role: m.role, content: m.content })),
+    max_tokens: maxTokens,
+    temperature: temperature,
+    top_p: parseFloat(document.getElementById('topP').value),
+    stream: false,
   };
 
-  // HF Inference API requires auth token
-  const HF_TOKEN = localStorage.getItem('hf_token') || '';
-  const headers = { 'Content-Type': 'application/json' };
-  if (HF_TOKEN) headers['Authorization'] = 'Bearer ' + HF_TOKEN;
-  
-  // HF Inference API supports CORS when token is provided
   const resp = await fetch(API_URL, {
     method: 'POST',
-    headers: headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 
   if (!resp.ok) {
     const err = await resp.text();
-    throw new Error(`HF API ${resp.status}: ${err.substring(0, 200)}`);
+    throw new Error(`Cloud API ${resp.status}: ${err.substring(0, 200)}`);
   }
 
   const data = await resp.json();
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
   let content = '';
-  if (Array.isArray(data)) {
-    content = data[0]?.generated_text || data[0]?.text || JSON.stringify(data[0]);
+  if (data.choices && data.choices[0]) {
+    content = data.choices[0].message?.content || data.choices[0].text || '';
   } else if (data.generated_text) {
     content = data.generated_text;
   } else {
     content = JSON.stringify(data);
-  }
-
-  // Clean up: remove the input prompt from output if model echoes it
-  const lastUserMsg = fullMessages[fullMessages.length - 1].content;
-  if (content.startsWith(lastUserMsg)) {
-    content = content.substring(lastUserMsg.length).trim();
   }
 
   typingDiv.remove();
@@ -426,8 +414,8 @@ async function sendCloud(typingDiv, fullMessages, t0) {
   document.getElementById('tokenStats').style.display = 'flex';
   document.getElementById('statTime').textContent = elapsed + 's';
   document.getElementById('statTps').textContent = '~';
-  document.getElementById('statPrompt').textContent = '~';
-  document.getElementById('statCompletion').textContent = content.split(/\s+/).length;
+  document.getElementById('statPrompt').textContent = data.usage?.prompt_tokens || '~';
+  document.getElementById('statCompletion').textContent = data.usage?.completion_tokens || content.split(/\s+/).length;
 
   messages.push({ role: 'assistant', content });
 }
