@@ -6,19 +6,7 @@
 <title>登录 — PowerAuto.ai</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-<script>
-// Inline Supabase REST client (no CDN needed)
-window._sbRest = function(method, path, body) {
-  const url = 'https://natitecelkwapfqwaplz.supabase.co' + path;
-  const headers = {
-    'apikey': 'sb_publishable_KgNGEYHiXylJj1r_sULkgw_0hKsRFrD',
-    'Content-Type': 'application/json'
-  };
-  const token = localStorage.getItem('sb_token');
-  if (token) headers['Authorization'] = 'Bearer ' + token;
-  return fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined }).then(r => r.json());
-};
-</script>
+
 <style>
 :root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#a0a0b8;--heading:#f0f0ff;--accent:#6c5ce7;--accent2:#00cec9;--gradient:linear-gradient(135deg,#6c5ce7,#00cec9);--error:#ff6b6b;--success:#51cf66}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -327,7 +315,7 @@ async function handleOAuth(provider) {
 // 已登录则跳转
 // ============================================================
 (async () => {
-  if (!getSupabase()) {
+  if (typeof Auth === "undefined") {
     showMessage('⚠️ Supabase 未配置，请先设置 auth/config.js', 'error');
     return;
   }
