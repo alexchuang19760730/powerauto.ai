@@ -58,14 +58,34 @@
 
 ## 2. 账号与密钥清单
 
-### ⚠️ 安全提醒：以下密钥仅存档，生产环境使用 Secret Manager 或环境变量
+### 密钥管理：私有仓库 + 本地缓存
 
-| 服务 | 账号 | 密钥 | 用途 |
-|------|------|------|------|
-| **GitHub** | alexchuang19760730 | `<YOUR_GITHUB_PAT>` | powerauto.ai 仓库 push |
-| **HuggingFace** | Alexchuang | `<YOUR_HF_TOKEN>` | Cloudflare Worker Secret |
-| **Cloudflare** | alexchuang | `<YOUR_CF_TOKEN>` | Worker 部署 |
-| **Cloudflare Account ID** | — | `fb57aa397c138de403429f86ca5e2f24` | Worker 部署 |
+所有密钥存在 GitHub 私有仓库 `alexchuang19760730/powerauto-secrets`（仅你有权限）。
+
+**Mac 端获取密钥（一步到位）：**
+
+```bash
+# 1. Clone 私有仓库（用你的 GitHub PAT 认证）
+git clone https://github.com/alexchuang19760730/powerauto-secrets.git ~/.powerauto
+
+# 2. 设置环境变量（加到 ~/.zshrc 或 ~/.bashrc）
+export POWERAUTO_GITHUB_PAT="ghp_你的token"
+export POWERAUTO_HF_TOKEN="hf_你的token"
+export POWERAUTO_CF_TOKEN="cfut_你的token"
+export POWERAUTO_CF_ACCOUNT_ID="fb57aa397c138de403429f86ca5e2f24`
+
+# 3. 验证
+python3 secrets_manager.py
+```
+
+**密钥清单（不存明文，只存变量名）：**
+
+| 变量名 | 用途 | 在哪里使用 |
+|--------|------|-----------|
+| `POWERAUTO_GITHUB_PAT` | GitHub 仓库 push | `git push` / GitHub API 上传 |
+| `POWERAUTO_HF_TOKEN` | HuggingFace 推理 | Cloudflare Worker Secret |
+| `POWERAUTO_CF_TOKEN` | Cloudflare Worker 部署 | Worker API 更新 |
+| `POWERAUTO_CF_ACCOUNT_ID` | Cloudflare Account | Worker API 路由 |
 
 ### Mac 端需要的账号
 
