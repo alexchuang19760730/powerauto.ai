@@ -97,6 +97,12 @@ ul{margin:4px 0;padding-left:18px}li{margin:2px 0}
 <div id="momentum"></div>
 
 </div>
+<div id="s6" class="sect">
+<h2>⑥ 局域网（LAN）—— 端侧跟我们真的在同一个网段上吗</h2>
+<div class="small" id="lan_note"></div>
+<div id="lan_body"></div>
+
+</div>
 <div class="box ok">
   <b>这一页的可信度边界</b>
   <ul>
@@ -248,6 +254,59 @@ function chip(st){
 }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
+// ── ⑥ 區網：每台機器的 LAN 位址、每個服務綁在哪、以及「綁定 ≠ 可達」
+function lanBlock(){
+  const L = EXPORT.lan;
+  if(!L) return {note:"<b>导出里没有 lan 区块</b> —— 权威来源还没跑 --export。", body:""};
+  const MARK = {"bound-lan":"✓ LAN","bound-lan-only":"✓ LAN（只绑该 IP）",
+                "loopback-only":"只 loopback","absent":"没在跑"};
+  const pv = {}; (L.services||[]).forEach(x=>{ if(x.probe) pv[x.id]=x.probe; });
+  const warn = L.probe_ran ? "" : `　·　<b>本轮没有实测</b>（导出时加 <code>--lan-probe</code> 才会量绑定）`;
+  const note = `<b>本机</b>：<code>${esc(L.iface)}</code> <b>${esc(L.ipv4)}</b>／${esc(L.cidr)}
+    　网关 <code>${esc(L.gateway)}</code>　·　API 防火墙 <b>${esc(L.firewall)}</b>${warn}
+    <div style="margin-top:4px">★ 防火墙是<b>关着</b>的 ⇒ 端侧连不上<b>不是</b>被防火墙挡的；
+    唯一的阻碍是「服务有没有绑在 LAN 地址上」。
+    <b>绑定 ≠ 可达</b>：本机从自己的 LAN 地址连得上，证明的只是 socket 绑在哪里；
+    别的机器连不连得上，还要看 AP isolation／路由器 ACL —— <b>只有对端自己回报才算数</b>。</div>`;
+
+  const rows = (L.services||[]).map(x=>{
+    const p = pv[x.id]||{};
+    let live = p.verdict ? esc(MARK[p.verdict]||p.verdict) : '<span class="tag t-grey">未实测</span>';
+    if(p.identity && p.identity.verdict) live += `　身份 <b>${esc(p.identity.verdict)}</b>`;
+    if(x.lan_ready===true && p.verdict && !/^bound-lan/.test(p.verdict))
+      live += ` <span class="tag t-amber">宣告 lan_ready 但没绑</span>`;
+    return `<tr><td><code>${esc(x.id)}</code><div class="small">${esc(x.what)}</div></td>
+      <td class="num">${esc(x.port)}</td>
+      <td class="small"><code>${esc(x.binds_default)}</code></td>
+      <td class="small">${x.auth_required?"要":"不要"}</td>
+      <td class="small">${live}</td></tr>`;
+  }).join("");
+
+  const frows = (L.foreign_lan_ports||[]).map(f=>
+    `<tr><td class="num">${esc(f.port)}</td>
+      <td class="small">${esc(f.who)}<div class="small">${esc(f.why_it_matters||"")}</div></td></tr>`
+  ).join("");
+
+  const sec = (L.security||[]).map(w=>
+    `<div class="box bad" style="margin:8px 0"><b>★ 安全：${esc(w.id)} :${esc(w.port)}</b>
+     <div class="small" style="margin-top:4px">${esc(w.detail)}</div></div>`).join("");
+
+  const how = (L.services||[]).filter(x=>x.lan_ready===true)
+    .map(x=>`<li><code>${esc(x.id)}</code>：<code>${esc(x.how)}</code></li>`).join("");
+
+  const body = `${sec}
+   <table><thead><tr><th>服务</th><th>埠</th><th>宣告绑定</th><th>要认证</th><th>实测</th></tr></thead>
+   <tbody>${rows}</tbody></table>
+   <div class="small"><b>别人的埠</b> —— 可达 ≠ 是我们的。本机唯一真的绑在局域网上的埠是 macOS 的 AirPlay；
+   任何「可达就报绿」的判定都会对它说谎。</div>
+   <table><thead><tr><th>埠</th><th>是谁／为什么登记它</th></tr></thead><tbody>${frows}</tbody></table>
+   <div class="small" style="margin-top:8px"><b>要让端侧连得上，起这个</b>：</div>
+   <ul class="small">${how}</ul>
+   <div class="small">怎么验（在 CGC repo）：<code>python3 agent_harness/portal/lan_check.py --check</code>（离线）
+    　·　<code>… --probe</code>（实测绑定）　·　<code>… --self-test</code>（20 格，真的起 socket）</div>`;
+  return {note, body};
+}
+
 function render(){
   applyRole();
   const a = activeEp();
@@ -280,6 +339,9 @@ function render(){
   document.getElementById("gen").textContent = "生成于 " + EXPORT.generated_at;
   document.getElementById("src").textContent = EXPORT.source.producer;
   document.getElementById("target_src").textContent = (EXPORT.targets||{}).source || "";
+  const LB = lanBlock();
+  document.getElementById("lan_note").innerHTML = LB.note;
+  document.getElementById("lan_body").innerHTML = LB.body;
   document.getElementById("foot").innerHTML =
     `来源：<code>${esc(EXPORT.source.repo)}</code> @ <code>${esc(EXPORT.source.head)}</code>（${esc(EXPORT.source.branch)}）
      　·　重跑：<code>${esc(EXPORT.source.how_to_regenerate)}</code>
