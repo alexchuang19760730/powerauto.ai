@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "note": "推論端點（base URL）的單一真相。★ 與 CGC 機隊入口的 fleet.json 是兩個層次：那邊是「跑推理的機器」（平台／能力／資產），這裡是「推論端點」（一個 base URL）。兩者用 id 對得上。　★ 2026-09-18：可達 ≠ 是我們的服務 —— 實測 port 8080 曾被 CGC fork 的 llama-server（/v1/cgc/profile 回 404）佔用。只驗可達會把**別人的**服務報成 LIVE，所以 edge 端點帶 identity 斷言。",
+  "why_a_list": "「切 endpoint」這個動作需要一份清單；散在三個地方（前端、Worker、白皮書）必然漂移，而漂移是靜默的。",
+  "default_id": "edge-local",
+  "endpoints": [
+    {
+      "id": "edge-local",
+      "name": "端側（這台裝置）",
+      "side": "edge",
+      "base_url": "http://localhost:8080/v1",
+      "health_path": "/models",
+      "how_it_runs": "installer/edge_server.py --model <gguf> --port 8080（OpenAI 相容；:8081 是 worker）　★ 探測會驗身分（/v1/edge/status 的 object 與 endpoint_id）：可達但身分不符 ⇒ foreign，不是 LIVE。",
+      "reachable_from": "只有使用者自己的裝置",
+      "device_identity": "同一台機器上，CGC 機隊入口的 mac-local 是它的資產視角",
+      "measured_20260918": "未啟動 ⇒ unknown（不是壞掉）",
+      "identity": {
+        "path": "/v1/edge/status",
+        "object": "powerauto.edge.status",
+        "endpoint_id": "edge-local"
+      }
+    },
+    {
+      "id": "mac-local",
+      "name": "本機 Mac M4（跨機）",
+      "side": "edge",
+      "base_url": "http://192.168.101.90:8080/v1",
+      "health_path": "/models",
+      "how_it_runs": "白皮書 §5：flashkv0516 的 scripts/run_n30cache.sh --server-api（llama-server，MTP 投機解碼）　★ 探測會驗身分（/v1/edge/status 的 object 與 endpoint_id）：可達但身分不符 ⇒ foreign，不是 LIVE。",
+      "reachable_from": "同一個區網",
+      "device_identity": "CGC 機隊入口的 mac-local",
+      "measured_20260918": "不可達 ⇒ unknown（本輪不在同一區網或未啟動）",
+      "identity": {
+        "path": "/v1/edge/status",
+        "object": "powerauto.edge.status",
+        "endpoint_id": "mac-local"
+      }
+    },
+    {
+      "id": "cloud-custom-domain",
+      "name": "雲側（Cloudflare，自訂網域）",
+      "side": "cloud",
+      "base_url": "https://api.powerauto.ai/v1",
+      "health_path": "/models",
+      "how_it_runs": "Cloudflare Worker powerauto-inference（HF 代理）＋ 自訂網域路由",
+      "requires": "★ 需要在 Cloudflare 把 api.powerauto.ai 指到那個 Worker。這是唯一從中國大陸可用的雲側形式（見 README 的發現一）。",
+      "measured_20260918": "尚未設定 ⇒ 無法量測"
+    },
+    {
+      "id": "cloud-workers-dev",
+      "name": "雲側（workers.dev 子網域）",
+      "side": "cloud",
+      "base_url": "https://powerauto-inference.powerauto-ai.workers.dev/v1",
+      "health_path": "/models",
+      "how_it_runs": "同一個 Worker，只是走預設子網域",
+      "measured_20260918": "★ 從中國大陸不可達：DNS 被污染到 118.184.26.113（不是 Cloudflare 的 104.x／172.x）",
+      "caveat": "保留這一筆是為了可追溯 —— 白皮書 §4.2 記的就是這個 URL。它不該是預設值。"
+    }
+  ]
+}

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PowerAuto 端云侧部署管理</title>
+<style>
+:root{--fg:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#fff;--soft:#f9fafb;--code:#f3f4f6;
+      --blue:#1d4ed8;--green:#15803d;--red:#b91c1c;--amber:#b45309;--purple:#6d28d9;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 18px 80px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:26px 0 10px;padding-top:12px;border-top:1px solid var(--line)}
+h3{font-size:15px;margin:16px 0 6px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+a{color:var(--blue)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:12.6px;font-family:ui-monospace,Menlo,monospace;word-break:break-all}
+table{border-collapse:collapse;width:100%;margin:10px 0 16px;font-size:13.2px}
+th,td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{background:var(--soft);font-weight:600}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--soft)}
+.t-green{color:var(--green);border-color:#bbf7d0;background:#f0fdf4}
+.t-amber{color:var(--amber);border-color:#fde68a;background:#fffbeb}
+.t-red{color:var(--red);border-color:#fecaca;background:#fef2f2}
+.t-grey{color:var(--muted);border-color:var(--line);background:var(--soft)}
+.t-blue{color:var(--blue);border-color:#bfdbfe;background:#eff6ff}
+.box{border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:4px;padding:10px 13px;margin:14px 0}
+.box.warn{border-left-color:var(--amber);background:#fffdf5}
+.box.ok{border-left-color:var(--green);background:#f6fdf8}
+.box.pur{border-left-color:var(--purple);background:#faf8ff}
+.sect{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin:12px 0 18px}
+.card{border:1px solid var(--line);border-radius:6px;padding:12px 14px;background:var(--soft)}
+.card.on{border-color:#93c5fd;background:#eff6ff}
+.small{font-size:12.3px;color:var(--muted)}
+button{font:inherit;font-size:12.5px;padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}
+button:hover{background:var(--soft)}
+button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.ev{font-size:11.6px;color:var(--muted);font-family:ui-monospace,Menlo,monospace;word-break:break-all}
+ul{margin:4px 0;padding-left:18px}li{margin:2px 0}
+.expl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+</style></head>
+<body><div class="wrap">
+
+<h1>PowerAuto 端云侧部署管理</h1>
+<p class="sub">
+  <span id="role_tag"><span class="tag t-purple">超级使用者视图</span></span>
+  <span id="gen">生成时间加载中…</span>　·　
+  数据来源 <code id="src">fleet_export.json</code>　·　
+  endpoint 清单 <code>endpoints.json</code>
+</p>
+
+<div class="box warn">
+  <b>这一页只显示角色，不是闸门。</b>页面上的角色来自 <code>window.POWERAUTO_ROLE</code> 或
+  <code>?role=</code>。<b>默认是 <code>user</code>（最小权限）</b> —— 这一页部署后任何人都能开，
+  默认给 <code>superuser</code> 等于「忘了接闸门就自动全开」。
+  <b>前端判断角色不构成访问控制</b>：任何人都能抓到这个 HTML。
+  真正的闸门必须在服务器端（GitHub Pages 不执行 PHP ⇒ 只能用 Cloudflare），
+  登录／用户管理由另一个 agent 负责，我方只消费它的结果，接入点只有一个字段：
+  <code>role ∈ {superuser, admin, user}</code>。
+  <div class="small" id="role_note" style="margin-top:8px"></div>
+</div>
+
+<div id="s1" class="sect">
+<h2>① 端点切换（端侧 ↔ 云侧）</h2>
+<div class="small"><b>可達 ≠ 是我們的服務</b>：edge 端點帶身分斷言（<code>/v1/edge/status</code>），埠上若是別的服務會顯示 <b>foreign</b>，不報 LIVE。同一个入口，切 <code>base_url</code> 就在端侧／云侧之间切换。探测失败一律是 <b>unknown（灰）</b>，
+不是红 —— 连不上只说明「现在不知道」。<span id="probe_mode" class="small"></span></div>
+<div class="expl">
+  <span>当前端点：<b id="active_name">—</b></span>
+  <code id="active_url">—</code>
+  <button onclick="probeAll()">全部探测</button>
+  <button onclick="copyActive()">复制 base_url</button>
+</div>
+<div class="cards" id="ep_cards"></div>
+
+</div>
+<div id="s2" class="sect">
+<h2>② 端侧 AI 目标（prefill / decode）</h2>
+<div class="small" id="target_src"></div>
+<div class="cards" id="tgt_cards"></div>
+
+</div>
+<div id="s3" class="sect">
+<h2>③ 机队：本机与跨机的资产能力</h2>
+<div class="small">每一端都带着「未量测」清单 —— 缺席要出声，不画成绿灯。</div>
+<div class="cards" id="fleet_cards"></div>
+
+</div>
+<div id="s4" class="sect">
+<h2>④ 七日：六个来源，逐格标出处</h2>
+<div class="small" id="trend_note"></div>
+<svg id="chart" viewBox="0 0 680 130" width="100%" role="img" aria-label="commit 七日"></svg>
+<table><thead id="trend_head"></thead><tbody id="trend_body"></tbody></table>
+
+</div>
+<div id="s5" class="sect">
+<h2>⑤ 动能（决策被后续工作用上的程度）</h2>
+<div id="momentum"></div>
+
+</div>
+<div class="box ok">
+  <b>这一页的可信度边界</b>
+  <ul>
+    <li>所有数字都是 <code>fleet_export.json</code> 的<b>转述</b>；权威来源是
+      <code>python3 agent_harness/portal/build_fleet_portal.py --export</code>（CGC repo）。</li>
+    <li>心跳／探测失败写 <b>unknown</b>，不上报写「未上报」；两者都不是失败。</li>
+    <li>「无记录」与 <b>0</b> 是两件事：0 是量到没有，无记录是根本没量。</li>
+    <li>本页不主张任何端侧能力的实测结果 —— 端侧能力来自建置脚本，见机队卡片的「未量测」。</li>
+  </ul>
+</div>
+
+<div class="small" id="foot" style="margin-top:22px;border-top:1px solid var(--line);padding-top:10px"></div>
+
+</div>
+<script>
+"use strict";
+// 角色由登入閘門設定 window.POWERAUTO_ROLE（接入點只有這一個欄位，見 README §4）。
+// ★ 預設刻意是 user（最小權限）：這一頁部署後任何人都能開，
+//   預設 superuser 等於「忘了接閘門就自動全開」。本機開發用 ?role=superuser。
+const ROLES = ["superuser", "admin", "user"];
+const _want = new URLSearchParams(location.search).get("role")
+           || window.POWERAUTO_ROLE || "";
+const ROLE = ROLES.includes(_want) ? _want : "user";
+const ROLE_SEEN = ROLES.includes(_want) ? "explicit" : "default（最小權限）";
+// 誰看得到哪幾區。★ 這一層是**顯示**，不是閘門 —— HTML 任何人都抓得到；
+//   真正的閘門必須在伺服器端，而 GitHub Pages 不跑 PHP ⇒ 只能用 Cloudflare（見 README §4b）。
+const SECTION_NAMES = {s1:"端点切换", s2:"端侧 AI 目标", s3:"机队资产能力",
+                       s4:"七日趋势", s5:"动能"};
+const SECTION_ORDER = ["s1","s2","s3","s4","s5"];
+const SECTIONS = {superuser: SECTION_ORDER, admin: ["s1","s2","s3"], user: ["s1"]}[ROLE];
+function applyRole(){
+  SECTION_ORDER.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = SECTIONS.includes(id) ? "" : "none";
+  });
+  const tagTxt = ROLE==="superuser" ? '<span class="tag t-purple">超级使用者视图</span>'
+               : ROLE==="admin" ? '<span class="tag t-blue">管理者视图</span>'
+               : '<span class="tag t-grey">一般使用者视图</span>';
+  const t = document.getElementById("role_tag");
+  if(t) t.innerHTML = tagTxt;
+  const hidden = SECTION_ORDER.filter(x=>!SECTIONS.includes(x)).map(x=>SECTION_NAMES[x]);
+  const rn = document.getElementById("role_note");
+  if(rn) rn.innerHTML = `当前角色 <code>${ROLE}</code>（来源 ${ROLE_SEEN}）`
+    + (hidden.length
+        ? `　·　已隐藏：<b>${hidden.join("、")}</b>　—— 这只是<b>显示</b>层：HTML 谁都能抓，`
+          + `真正的闸门必须在服务器端。`
+        : `　·　全部分区可见。`);
+}
+const LS_ACTIVE = "powerauto.active_endpoint";
+let EPS = [], EXPORT = null, HEALTH = {}, LOCAL_API = true;
+
+async function jget(url){
+  const r = await fetch(url, {cache:"no-store"});
+  if(!r.ok) throw new Error(url+" -> HTTP "+r.status);
+  return r.json();
+}
+async function loadAll(){
+  // 端点清单：优先本地 /api/endpoints（端侧模式），否则静态文件
+  try { EPS = (await jget("/api/endpoints")).endpoints || []; }
+  catch(e){ LOCAL_API = false; EPS = (await jget("endpoints.json")).endpoints || []; }
+  document.getElementById("probe_mode").textContent =
+    LOCAL_API ? "（端侧模式：探测走本机 /api/health，避开 CORS）"
+              : "（静态模式：直接 fetch，受各 endpoint 的 CORS 限制 —— 失败会是 unknown）";
+  // 机队汇出：优先 /api/export，否则静态文件
+  try { EXPORT = await jget("/api/export"); }
+  catch(e){ EXPORT = await jget("fleet_export.json"); }
+  render();
+}
+function activeId(){ return localStorage.getItem(LS_ACTIVE) || (EPS[0] && EPS[0].id); }
+function setActive(id){ localStorage.setItem(LS_ACTIVE, id); render(); }
+function activeEp(){ return EPS.find(e=>e.id===activeId()) || EPS[0]; }
+
+async function probeOne(ep){
+  const url = ep.base_url.replace(/\/$/,"") + (ep.health_path||"/models");
+  if(LOCAL_API){
+    // ★ 走 ?id=（讓伺服器用 endpoints.json 的身分斷言），失敗才退回只驗可達的 ?url=
+    try { return await jget("/api/health?id="+encodeURIComponent(ep.id)); }
+    catch(e1){
+      try { return await jget("/api/health?url="+encodeURIComponent(url)); }
+      catch(e2){ return {state:"unknown", detail:"本地探测接口失败: "+e2.message}; }
+    }
+  }
+  // ★ 静态宿主（GitHub Pages）：没有 /api/health，而且这一页是 https 而端点是 http://localhost
+  //   ⇒ 浏览器以 mixed content 直接挡掉，试出来只会是 TypeError。
+  //   那**不是**「端点挂了」，是「这一页根本不能探测」。所以不假装探测，直接说清楚。
+  if(!LOCAL_API){
+    return {state:"unknown",
+            detail:"静态页面无法探测：https 页面被浏览器禁止直连 http://localhost（mixed content）。"
+                 + "要即时探测请用端侧的 serve.py，或让云端闸门代理探测。"};
+  }
+  try{
+    const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 4000);
+    const r = await fetch(url, {signal:ctl.signal}); clearTimeout(t);
+    return {state: r.ok ? "live":"unknown", detail:"HTTP "+r.status};
+  }catch(e){ return {state:"unknown", detail:"（浏览器直连）"+(e.name||"Error")+" ⇒ 不知道，不是没有"}; }
+}
+async function probeAll(){
+  await Promise.all(EPS.map(async ep => { HEALTH[ep.id] = await probeOne(ep); }));
+  render();
+}
+function chip(st){
+  // ★ foreign / unverified 是為了不讓觀察器說謊：可達 ≠ 是我們的服務、≠ 身分驗過了。
+  const m = {live:["t-green","LIVE"], unknown:["t-grey","unknown"], blocked:["t-amber","blocked"],
+             foreign:["t-red","foreign（別的服務）"], unverified:["t-amber","可達但身分未驗"]};
+  const [c,t] = m[st] || ["t-grey","—"];
+  return `<span class="tag ${c}">${t}</span>`;
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function render(){
+  applyRole();
+  const a = activeEp();
+  document.getElementById("active_name").textContent = a ? a.name : "—";
+  document.getElementById("active_url").textContent  = a ? a.base_url : "—";
+
+  document.getElementById("ep_cards").innerHTML = EPS.map(ep=>{
+    const h = HEALTH[ep.id];
+    return `<div class="card ${ep.id===activeId()?"on":""}">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+        <div><b>${esc(ep.name)}</b>
+          <div class="small">${chip(h&&h.state)} <span class="tag t-grey">${esc(ep.side)}</span>
+          ${ep.id===activeId()?'<span class="tag t-blue">当前</span>':''}</div></div>
+      </div>
+      <div class="ev" style="margin-top:6px">${esc(ep.base_url)}</div>
+      ${h?`<div class="ev">探测：${esc(h.detail||"")}</div>`:""}
+      ${h&&h.identity_ok===true?`<div class="ev">身分：<b>已驗</b> ${esc((h.identity||{}).seen||"")}</div>`:""}
+      ${h&&h.identity_ok===false?`<div class="ev"><b>身分驗不過</b>：${esc((h.identity||{}).probed||"")} 回 ${esc((h.identity||{}).seen||"")}</div>`:""}
+      ${ep.measured_20260918?`<div class="ev">上轮实测：${esc(ep.measured_20260918)}</div>`:""}
+      ${ep.requires?`<div class="ev">前提：${esc(ep.requires)}</div>`:""}
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button class="primary" onclick="setActive('${esc(ep.id)}')" ${ep.id===activeId()?"disabled":""}>设为当前</button>
+        <button onclick="probeOne('${esc(ep.id)}')">探测</button>
+      </div>
+    </div>`;
+  }).join("");
+  window.probeOne = async (id)=>{ const ep=EPS.find(x=>x.id===id); HEALTH[id]=await probeOne(ep); render(); };
+
+  if(!EXPORT) return;
+  document.getElementById("gen").textContent = "生成于 " + EXPORT.generated_at;
+  document.getElementById("src").textContent = EXPORT.source.producer;
+  document.getElementById("target_src").textContent = (EXPORT.targets||{}).source || "";
+  document.getElementById("foot").innerHTML =
+    `来源：<code>${esc(EXPORT.source.repo)}</code> @ <code>${esc(EXPORT.source.head)}</code>（${esc(EXPORT.source.branch)}）
+     　·　重跑：<code>${esc(EXPORT.source.how_to_regenerate)}</code>
+     　·　模式 <code>${esc(EXPORT.source.mode)}</code>`;
+
+  document.getElementById("tgt_cards").innerHTML = (EXPORT.targets.items||[]).map(t=>{
+    const ok = /met|达成/i.test(t.status||"");
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+        <b>${esc(t.title)}</b><span class="tag ${ok?"t-green":"t-amber"}">${esc(t.status)}</span></div>
+      <div class="small" style="margin-top:6px">指标 <code>${esc(t.metric)}</code>　目标
+        <b>${esc(t.compare)} ${esc(t.goal)} ${esc(t.unit)}</b></div>
+      <div style="margin-top:6px">现值：${esc(t.current_text||t.current)}</div>
+      <div class="small">差距：${esc(t.gap)}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("fleet_cards").innerHTML = (EXPORT.endpoints||[]).map(e=>`
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+        <div><b>${esc(e.name)}</b><div class="small"><code>${esc(e.id)}</code>　${esc(e.platform)}/${esc(e.arch)}</div></div>
+        <span class="tag t-grey">${esc(e.chip)}</span></div>
+      <div class="small" style="margin-top:6px">${esc(e.role)}</div>
+      <div style="margin-top:6px"><b>能力</b></div><ul class="small">${(e.capabilities||[]).map(c=>`<li>${esc(c)}</li>`).join("")}</ul>
+      <div><b>未量测</b></div><ul class="small">${(e.not_measured||[]).map(c=>`<li>${esc(c)}</li>`).join("")||"<li>（无）</li>"}</ul>
+    </div>`).join("");
+
+  const T = EXPORT.trend, days = T.days, miss = T.missing_label;
+  document.getElementById("trend_note").textContent =
+    `「${miss}」与 0 是两件事。每个来源都标了归日依据；覆盖天数逐列写出。`;
+  document.getElementById("trend_head").innerHTML =
+    `<tr><th>来源</th>${days.map(d=>`<th class="num">${d.slice(5)}</th>`).join("")}<th>覆盖</th></tr>`;
+  document.getElementById("trend_body").innerHTML = T.series.map(s=>{
+    const cells = days.map(d=>{
+      const v = s.cells[d];
+      return v==null ? `<td class="num small">${esc(miss)}</td>` : `<td class="num">${v}${esc(s.unit)}</td>`;
+    }).join("");
+    return `<tr><td><b>${esc(s.label)}</b><div class="small">${esc(s.day_basis)}</div></td>${cells}
+      <td class="small">${s.covers}/${days.length}</td></tr>`;
+  }).join("");
+
+  // commit 长条图（唯一的图；空框代表无记录）
+  const s0 = T.series[0];
+  const vals = days.map(d=>s0.cells[d]);
+  const mx = Math.max(1, ...vals.filter(v=>v!=null));
+  const bw = 600/days.length;
+  let svg = `<text x="4" y="12" font-size="11" fill="#6b7280">${esc(s0.label)}（最大 ${mx}${esc(s0.unit)}）· 虚线框 = 无记录</text>`;
+  days.forEach((d,i)=>{
+    const x = 20 + i*bw, v = vals[i];
+    if(v==null){ svg += `<rect x="${x+4}" y="24" width="${bw-8}" height="80" fill="none" stroke="#d1d5db" stroke-dasharray="3 3"/>`; }
+    else { const h = 80*v/mx; svg += `<rect x="${x+4}" y="${104-h}" width="${bw-8}" height="${h}" fill="#1d4ed8" rx="2"/>
+      <text x="${x+bw/2}" y="${100-h}" font-size="10" fill="#374151" text-anchor="middle">${v}</text>`; }
+    svg += `<text x="${x+bw/2}" y="120" font-size="9" fill="#6b7280" text-anchor="middle">${d.slice(5)}</text>`;
+  });
+  document.getElementById("chart").innerHTML = svg;
+
+  const M = EXPORT.momentum;
+  document.getElementById("momentum").innerHTML = `
+    <div class="expl">${Object.entries(M.counts).map(([k,v])=>
+      `<span class="tag ${(k==="orphan"||k==="pending")?"t-grey":"t-green"}">${esc(k)} ${v}</span>`).join("")}</div>
+    <div class="small">refuted ${esc(M.refuted_rate)}（阈值 ${esc(M.threshold_refuted)}）　·　
+      orphan ${esc(M.orphan_rate)}（阈值 ${esc(M.threshold_orphan)}）　·　
+      判定 <span class="tag ${M.verdict==="动能尚可"?"t-green":"t-amber"}">${esc(M.verdict)}</span></div>
+    <div class="small" style="margin-top:6px">${esc(M.note)}</div>`;
+}
+function copyActive(){ const a = activeEp(); navigator.clipboard && navigator.clipboard.writeText(a.base_url); }
+applyRole();          // 先套角色，再載資料 —— 載入失敗也不能讓該藏的區塊露出來
+loadAll().catch(e=>{
+  document.getElementById("ep_cards").innerHTML =
+    `<div class="box warn">加载失败：<code>${esc(e.message)}</code><br>
+     静态模式下需要与本页同目录的 <code>endpoints.json</code> 与 <code>fleet_export.json</code>；
+     端侧模式下用 <code>python3 serve.py</code> 起服务。</div>`;
+});
+</script>
+</body></html>

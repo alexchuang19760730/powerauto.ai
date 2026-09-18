@@ -759,4 +759,99 @@ HF_TOKEN=<YOUR_HF_TOKEN>
 
 ---
 
+## 附录 C：2026-09-18 实测更新（端侧包装器 v2 ＋ Portal ＋ 四个平台事实）
+
+> 本节由**端云侧部署管理**这条线追加；上面 §1–§11 与附录 A／B 的原文**一字未改**。
+> `powerauto-secrets` 里那份白皮书副本仍是改动前的版本（未同步，见 C.6）。
+
+### C.1 `installer/edge_server.py` v2 —— 修掉 6 个会在真实部署时爆掉或**静默出错**的问题
+
+| # | v1 的问题 | 症状 | v2 |
+|---|---|---|---|
+| 1 | `./llama-server` 写死 | PATH 里明明有（Homebrew／系统套件）也用不到 | 依序找：`--llama-server` → 脚本同目录 → `bin/` → CWD → PATH |
+| 2 | 找不到执行档／模型直接抛 traceback | 用户看到堆栈，而不是「该把档案放哪」 | 印出**找过哪些路径**并 rc=1 |
+| 3 | `os.sysconf` 在 Windows 不存在 | Windows 端打 `/v1/cgc/profile` 会 AttributeError（而 Windows 是目标平台） | 加 Windows fallback（`GlobalMemoryStatusEx`） |
+| 4 | `0.0.0.0` ＋ CORS `*` ＋ 无认证 | 同网段任何人可用你的 GPU | 加 `--api-key`；**绑非 loopback 又没设 key 时主动出声** |
+| 5 | 没有 OPTIONS handler | 浏览器带 `X-API-Key` 时 preflight 失败，Playground 连不上 | 加 `do_OPTIONS`（含 `Allow-Headers`） |
+| 6 | **手写 ChatML** | 对 Qwen 刚好正确，对其他模型**静默**给错 prompt（没有错误讯息，只有品质变差） | 预设委派 llama-server 自己的 `/v1/chat/completions`（套 GGUF 内建 chat template），失败才回退，并在 status 说明走哪条 |
+
+新增：
+
+- `GET /v1/edge/status` —— 管理面事实一次说清楚（worker 可达吗、走哪条 chat 路由、host 规格、llama-server 路径）。
+  ★ 其中 `chat_probe`（**能力**，启动时用 worker 的 `/v1/models` 推断）与 `chat_route`（**上次实际走过**的路由）
+  **刻意分成两个字段**：「它能」与「它这次走了」不是同一件事。
+- `--self-test` —— **36 格**黑箱自测（用 stub worker，**不需要真模型**），含 SSE、认证、attach、降级、旗标探测、失败讯息不得是 traceback。
+- 新旗标：`--llama-server`、`--worker-url`（接既有 worker）、`--no-worker`（只开管理面，**降级不是挂掉**）、
+  `--api-key`、`--endpoint-id`、`--chat-format auto|native|chatml`、`--log-dir`。
+
+### C.2 Portal 上线：`portal/`
+
+超级使用者登入后要看的那一页（端云侧部署管理视图）。用法与设计见 `portal/README.md`，要点：
+
+- **角色接入点只有一个字段**：`window.POWERAUTO_ROLE ∈ {superuser, admin, user}`（或 `?role=`）。
+  ★ **预设是最小权限 `user`** —— 这一页部署后任何人都能开，预设给 `superuser` 等于「忘了接闸门就自动全开」。
+- 分区：`superuser` 全看；`admin` 看端点／目标／机队；`user` 只看端点切换；
+  **未设定或乱填 ⇒ 视为 `user`**。
+- ★ **这一层是显示，不是闸门。** HTML 谁都能抓，真正的闸门必须在服务器端。
+- 数据是 CGC repo 的 `fleet_export.json` **快照**，本页**只转述、不重算**任何指标
+  （动能、七日、目标绑定只有在 CGC repo 算得出来；两份实作必然漂移，而漂移是静默的）。
+
+### C.3 ★ 四个实测的平台／网络事实（会改架构）
+
+| 事实 | 量测 | 后果 |
+|---|---|---|
+| **`*.workers.dev` 从中国大陆不可达** | `powerauto-inference.powerauto-ai.workers.dev` 的 DNS 解到 `118.184.26.113`（中国 IP，**不是** Cloudflare 的 104.x／172.x），TLS 前就 timeout；**同一颗沙箱**的 `example.com`／`www.cloudflare.com`／`powerauto.ai` 都 HTTP 200 | 是 **DNS 污染**，不是 Worker 挂了 ⇒ 云侧 endpoint **必须挂自定义域名** |
+| **Cloudflare 帐号里 `zones = 0`** | `GET /zones?account.id=...` 回 **0 笔**；Worker routes API 回 `Authentication error` | 这个帐号**没有任何域名** ⇒ **`api.powerauto.ai` 现在挂不起来**（要先把域名加进 Cloudflare、再去注册商改 NS） |
+| **`huggingface.co` 从这台机器不可达** | `--noproxy '*'` 也 HTTP 000；curl 曾试图连 `31.13.83.34`（**Meta 的 IP**） | HF token **无法在本机验证**；模型下载得靠别的通道（**这正是 Worker 存在的理由**） |
+| **`powerauto.ai` 在 GitHub Pages** | 解到 `185.199.108.153` | 站是**静态**的 ⇒ repo 里的 `admin/index.php`（PHP session）**在那个宿主上不会执行**（只会被当纯文本下载）。`.htaccess` 自述的「GoDaddy / Apache」是**另一套**宿主，两者并存 |
+
+**推论（重要）**：**闸门不能靠 PHP。** 要做「只有某种角色才看得到」的服务器端闸门，
+只能用 Cloudflare（Worker 验签／Access）——见 `portal/README.md`。
+
+### C.4 ★ 实测抓到的一个观察器缺陷：可達 ≠ 是我們的服務
+
+同一次实测里发现：port 8080 上当时是 **CGC fork 的 `llama-server`**
+（`/v1/cgc/profile` 回 404，因为那是 PowerAuto 的扩充端点），
+而 Portal 的探测**只看可达性** ⇒ 它会对**别人的**服务报 **LIVE**。
+症状**完全像「一切正常」**，是最贵的一种。
+
+已修：edge 端点的探测加**身分断言**（探 `/v1/edge/status`，比对 `object` 与 `endpoint_id`），新增两个状态：
+
+| 状态 | 意义 |
+|---|---|
+| `foreign` | 可达，但那个埠上的东西**不是我们的**（HTTP 4xx 或 `object` 不符，或 `endpoint_id` 认错机器） |
+| `unverified` | 可达，但身分**验不了**（探测途中网路错）—— 不假装 LIVE |
+
+`portal/serve.py --self-test` **16/16**，含一个「假装是别人服务」的 fixture
+（没有它，这条最像正常的故障永远测不到）。
+
+### C.5 端侧「真模型 → 真推理」这一步：**未完成，需要窗口**
+
+包装器已用 stub worker 黑箱验证 **36/36**，但**真模型这一步本身没做**，原因是**资源冲突，不是程式问题**：
+
+- 2026-09-18 14:14 实测：**port 8080 被 CGC fork 的 llama-server 占用**
+  （pid 82118，RSS **8.2 GB**，`--expert-cache 8 GB`），机器 `PhysMem 15G used / 10G wired / **158M unused**`。
+- 按这台机器既有的铁律（动手前先看 listener 与量测行程，任一非空就停手），
+  **没有**起 PowerAuto 的 edge server —— 会增记忆体压力，可能扰动另一条线正在跑的量测。
+
+补上时（窗口空出来，已备好一颗 637.8 MB 的真模型 `~/Documents/powerauto-models/tinyllama.gguf`）：
+
+```bash
+python3 installer/edge_server.py \
+  --model ~/Documents/powerauto-models/tinyllama.gguf \
+  --llama-server "$(command -v llama-server)" \
+  --host 127.0.0.1 --port 8080 --endpoint-id edge-local --log-dir .
+
+# 另开一个终端
+python3 portal/serve.py --port 8787
+# 浏览器开 http://127.0.0.1:8787/ ，按「全部探测」⇒ edge-local 应变 LIVE
+```
+
+### C.6 已知的未同步项
+
+`powerauto-secrets` 里的 `CROSS_PLATFORM_DEPLOYMENT_GUIDE.md` 是**本节追加之前**的版本
+（24,208 B）。两边内容会漂移，而且漂移是静默的 —— 待决定：同步，或把那份副本移除。
+
+---
+
 *文档结束。如需更新，请联系 powerauto.ai 团队。*
