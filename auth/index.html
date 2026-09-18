@@ -325,8 +325,12 @@ async function handleLogin(e) {
     const { data, error } = await Auth.signIn(email, password);
     if (error) throw error;
 
+    // Get user ID (Supabase token endpoint returns user at top level)
+    const userId = data.user?.id || data.id;
+    if (!userId) throw new Error('登录失败：无法获取用户信息');
+
     // 获取 profile
-    const profile = await Auth.getProfile(data.user.id);
+    const profile = await Auth.getProfile(userId);
     if (profile) {
       // 根据角色跳转
       if (profile.role === 'super_admin') {
