@@ -1,92 +1,86 @@
-// PowerAuto.ai - Supabase Config
-const SUPABASE_URL = 'https://natitecelkwapfqwaplz.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_KgNGEYHiXylJj1r_sULkgw_0hKsRFrD';
+// PowerAuto.ai - Supabase Config (pure fetch, no CDN)
+const SB_URL = 'https://natitecelkwapfqwaplz.supabase.co';
+const SB_KEY = 'sb_publishable_KgNGEYHiXylJj1r_sULkgw_0hKsRFrD';
 
-// Supabase JS v2 CDN: createClient is under window.supabase
-let _supabase = null;
-function getSupabase() {
-  if (_supabase) return _supabase;
-  if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-    _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } else if (typeof window.__supabase !== 'undefined' && window.__supabase.createClient) {
-    _supabase = window.__supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-  return _supabase;
+function sbHeaders() {
+  const h = { 'apikey': SB_KEY, 'Content-Type': 'application/json' };
+  const t = localStorage.getItem('sb_access_token');
+  if (t) h['Authorization'] = 'Bearer ' + t;
+  return h;
 }
 
-// Alias for backward compat
-const supabase = null; // will be set after init
+async function sbPost(path, body) {
+  const r = await fetch(SB_URL + path, { method: 'POST', headers: sbHeaders(), body: JSON.stringify(body) });
+  const d = await r.json();
+  if (d.access_token) localStorage.setItem('sb_access_token', d.access_token);
+  if (d.refresh_token) localStorage.setItem('sb_refresh_token', d.refresh_token);
+  return d;
+}
+
+async function sbGet(path) {
+  return await fetch(SB_URL + path, { headers: sbHeaders() }).then(r => r.json());
+}
+
+async function sbPatch(path, body) {
+  return await fetch(SB_URL + path, { method: 'PATCH', headers: sbHeaders(), body: JSON.stringify(body) }).then(r => r.json());
+}
+
+async function sbDelete(path) {
+  return await fetch(SB_URL + path, { method: 'DELETE', headers: sbHeaders() }).then(r => r.json());
+}
 
 const Auth = {
   async getUser() {
-    const sb = getSupabase();
-    if (!sb) return null;
-    const { data: { user } } = await sb.auth.getUser();
-    return user;
+    const t = localStorage.getItem('sb_access_token');
+    if (!t) return null;
+    const d = await sbPost('/auth/v1/user', {});
+    return d.id ? d : null;
   },
   async getProfile(userId) {
-    const sb = getSupabase();
-    if (!sb) return null;
-    const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
-    return data;
+    const rows = await sbGet('/rest/v1/profiles?id=eq.' + userId + '&select=*');
+    return rows?.[0] || null;
   },
   async signUp(email, password, displayName) {
-    const sb = getSupabase();
-    return await sb.auth.signUp({ email, password, options: { data: { display_name: displayName } } });
+    const d = await sbPost('/auth/v1/signup', { email, password, data: { display_name: displayName } });
+    return { data: d, error: d.error_description ? { message: d.error_description } : null };
   },
   async signIn(email, password) {
-    const sb = getSupabase();
-    return await sb.auth.signInWithPassword({ email, password });
-  },
-  async signInWithGitHub() {
-    const sb = getSupabase();
-    return await sb.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.origin + '/space/' } });
-  },
-  async signInWithGoogle() {
-    const sb = getSupabase();
-    return await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/space/' } });
+    const d = await sbPost('/auth/v1/token?grant_type=password', { email, password });
+    return { data: d, error: d.error_description ? { message: d.error_description } : null };
   },
   async signOut() {
-    const sb = getSupabase();
-    return await sb.auth.signOut();
+    localStorage.removeItem('sb_access_token');
+    localStorage.removeItem('sb_refresh_token');
   },
-  onAuthStateChange(cb) {
-    const sb = getSupabase();
-    if (!sb) return null;
-    return sb.auth.onAuthStateChange((e, s) => cb(e, s));
-  },
-  hasRole(p, r) { if (!p) return false; return ({super_admin:3,admin:2,user:1})[p.role]>=({super_admin:3,admin:2,user:1})[r]; },
   isSuperAdmin(p) { return p?.role === 'super_admin'; },
   isAdmin(p) { return p?.role === 'super_admin' || p?.role === 'admin'; }
 };
 
 const Space = {
-  async list(userId) { const sb=getSupabase(); const {data}=await sb.from('user_spaces').select('*').eq('user_id',userId).order('updated_at',{ascending:false}); return data||[]; },
-  async create(userId, title, modelId) { const sb=getSupabase(); const {data}=await sb.from('user_spaces').insert({user_id:userId,title:title||'新对话',model_id:modelId||'Qwen/Qwen3-1.7B'}).select().single(); return data; },
-  async update(sid, u) { const sb=getSupabase(); const {data}=await sb.from('user_spaces').update(u).eq('id',sid).select().single(); return data; },
-  async delete(sid) { const sb=getSupabase(); const {error}=await sb.from('user_spaces').delete().eq('id',sid); return !error; },
+  async list(userId) { return await sbGet('/rest/v1/user_spaces?user_id=eq.' + userId + '&order=updated_at.desc') || []; },
+  async create(userId, title, modelId) {
+    const rows = await sbPost('/rest/v1/user_spaces', { user_id: userId, title: title || '新对话', model_id: modelId || 'Qwen/Qwen3-1.7B' });
+    return Array.isArray(rows) ? rows[0] : rows;
+  },
+  async update(sid, u) { return await sbPatch('/rest/v1/user_spaces?id=eq.' + sid, u); },
+  async delete(sid) { return await sbDelete('/rest/v1/user_spaces?id=eq.' + sid); },
   async addMessage(sid, role, content) {
-    const sb=getSupabase();
-    const {data:sp}=await sb.from('user_spaces').select('messages').eq('id',sid).single();
-    const msgs=[...(sp?.messages||[]),{role,content,ts:Date.now()}];
-    const {data}=await sb.from('user_spaces').update({messages:msgs}).eq('id',sid).select().single();
-    return data;
+    const sp = await sbGet('/rest/v1/user_spaces?id=eq.' + sid + '&select=messages');
+    const msgs = [...(sp?.[0]?.messages || []), { role, content, ts: Date.now() }];
+    return await sbPatch('/rest/v1/user_spaces?id=eq.' + sid, { messages: msgs });
   }
 };
 
 const Admin = {
-  async listUsers() { const sb=getSupabase(); const {data}=await sb.from('profiles').select('*').order('created_at',{ascending:false}); return data||[]; },
-  async updateUserRole(uid, role) { const sb=getSupabase(); const {data}=await sb.from('profiles').update({role}).eq('id',uid).select().single(); return data; },
-  async listModels() { const sb=getSupabase(); const {data}=await sb.from('models').select('*').order('is_featured',{ascending:false}); return data||[]; },
-  async upsertModel(m) { const sb=getSupabase(); const {data}=await sb.from('models').upsert(m).select().single(); return data; },
-  async deleteModel(mid) { const sb=getSupabase(); const {error}=await sb.from('models').delete().eq('id',mid); return !error; },
+  async listUsers() { return await sbGet('/rest/v1/profiles?order=created_at.desc') || []; },
+  async updateUserRole(uid, role) { return await sbPatch('/rest/v1/profiles?id=eq.' + uid, { role }); },
+  async listModels() { return await sbGet('/rest/v1/models?order=is_featured.desc') || []; },
+  async upsertModel(m) { return await sbPost('/rest/v1/models', m); },
+  async deleteModel(mid) { return await sbDelete('/rest/v1/models?id=eq.' + mid); },
   async getStats() {
-    const sb=getSupabase();
-    const [u,m,l]=await Promise.all([
-      sb.from('profiles').select('id',{count:'exact',head:true}),
-      sb.from('models').select('id',{count:'exact',head:true}),
-      sb.from('request_logs').select('id',{count:'exact',head:true})
+    const [u,m,l] = await Promise.all([
+      sbGet('/rest/v1/profiles?select=id'), sbGet('/rest/v1/models?select=id'), sbGet('/rest/v1/request_logs?select=id')
     ]);
-    return {totalUsers:u.count||0,totalModels:m.count||0,totalRequests:l.count||0};
+    return { totalUsers: u?.length||0, totalModels: m?.length||0, totalRequests: l?.length||0 };
   }
 };
