@@ -11,6 +11,8 @@ Usage:
     python3 edge_server.py --worker-url http://127.0.0.1:8081   # 接既有 worker，不自己 spawn
     python3 edge_server.py --model m.gguf --no-worker            # 只開管理面（看得到狀態）
     python3 edge_server.py --self-test                           # 黑箱自測（用 stub worker，不需模型）
+    python3 edge_server.py --dump-status status.json --endpoint-id windows-rtx4090
+                                                                 # 離線端：寫出狀態就結束，不開埠
 
 Endpoints:
     GET  /health                  — 健康檢查（永遠公開）
@@ -362,6 +364,62 @@ def make_edge_status():
         "capabilities": caps,
         "not_measured": unm,
     }
+
+
+def dump_status(out):
+    """把 /v1/edge/status 那一份 JSON 直接寫到檔案（或 stdout），不起服務。
+
+    ★ 為什麼要有這一支：離線端（鴻蒙／Windows）不在我們的網路上，任何**即時協議**都不
+      成立。唯一在它們**真的離線時**仍然成立的機制是 store-and-forward —— 端點把狀態寫成
+      檔案，由既有通道（scp／git push）帶回來。這支就是「寫成檔案」那一步。
+      schema 與 /v1/edge/status **完全相同**：harness 側的
+      report_endpoint_status.py --from-edge-status 吃檔案與吃 URL 是同一條路
+      （契約是欄位，不是運輸方式）。
+
+    ★ 語意上的差異只寫在一格裡：`dump`。這是一次性行程的讀數 —— `uptime_s` 與 `served`
+      是**這個 dump 行程自己**的（幾乎一定是 0），不是一個長期服務的統計。不標這一格，
+      下游會把「剛 dump 所以 uptime≈0」讀成「服務剛重啟」。
+    """
+    st = make_edge_status()
+    st["dump"] = {
+        "mode": "--dump-status",
+        "note": ("本檔是一次性 dump：uptime_s 與 served 是**這個 dump 行程自己**的讀數，"
+                 "不是一個長期服務的統計。要服務的長期數字，就讓 edge_server 真的跑著、"
+                 "再抓 /v1/edge/status —— 兩者形狀相同、語意不同，差別就在這一格。"),
+        "produced_by": "edge_server.py --dump-status",
+    }
+    blob = json.dumps(st, ensure_ascii=False, indent=2) + "\n"
+
+    if out == "-":
+        sys.stdout.write(blob)
+        return 0
+
+    p = os.path.abspath(out)
+    d = os.path.dirname(p)
+    if d and not os.path.isdir(d):
+        try:
+            os.makedirs(d, exist_ok=True)
+        except OSError as e:
+            print("[Edge] [ERROR] 開不了輸出目錄 %s：%s" % (d, e))
+            return 1
+    tmp_p = p + ".tmp"
+    try:
+        with open(tmp_p, "w", encoding="utf-8") as fh:
+            fh.write(blob)
+        os.replace(tmp_p, p)               # 原子替換：不會留下半份 JSON
+    except OSError as e:
+        print("[Edge] [ERROR] 寫不進 %s：%s" % (p, e))
+        return 1
+
+    print("[Edge] 已寫出 %s" % p)
+    print("[Edge]   endpoint_id = %s   reported_at = %s"
+          % (st["endpoint_id"], st["reported_at"]))
+    print("[Edge]   下一步：用既有通道把它帶回去（scp／git push），落在")
+    print("[Edge]   agent_harness/portal/endpoints/<id>.status.json 就會被 fleet_auto 吃到")
+    if not st["endpoint_id"]:
+        print("[Edge] [WARN] 沒給 --endpoint-id ⇒ 這份 dump 不知道屬於誰，")
+        print("[Edge] [WARN] harness 側會拒跑（除非在命令列補 --id）。")
+    return 0
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -1131,8 +1189,49 @@ def self_test():
          r.returncode != 0 and "log-dir" in out and "Traceback" not in out,
          "rc=%s %s" % (r.returncode, out[-160:]))
 
+    # ── I. --dump-status：離線端唯一要做的那一步 ─────────────────────
+    def oneshot(argv):
+        return subprocess.run([sys.executable, ME] + argv, capture_output=True,
+                              text=True, timeout=120)
+
+    dp = os.path.join(tmp, "dump", "windows-rtx4090.status.json")
+    r = oneshot(["--dump-status", dp, "--endpoint-id", "windows-rtx4090"])
+    dj = None
+    if os.path.isfile(dp):
+        try:
+            with open(dp, encoding="utf-8") as fh:
+                dj = json.load(fh)
+        except ValueError:
+            dj = None
+    case("㊱ --dump-status 寫出合契約的 status（object／endpoint_id／dump 標註；不需模型、不開埠）",
+         r.returncode == 0 and isinstance(dj, dict)
+         and dj.get("object") == "powerauto.edge.status"
+         and dj.get("endpoint_id") == "windows-rtx4090"
+         and (dj.get("dump") or {}).get("mode") == "--dump-status"
+         and isinstance(dj.get("capabilities"), list)
+         and isinstance(dj.get("not_measured"), list)
+         and "reported_at" in dj,
+         "rc=%s keys=%s" % (r.returncode, sorted(dj)[:9] if isinstance(dj, dict) else dj))
+
+    r2 = oneshot(["--dump-status", "-", "--endpoint-id", "stdout-ep"])
+    ok_stdout = False
+    if r2.returncode == 0:
+        try:
+            ok_stdout = json.loads(r2.stdout).get("endpoint_id") == "stdout-ep"
+        except ValueError:
+            ok_stdout = False
+    case("㊲ --dump-status - ⇒ 寫到 stdout（可直接 json.loads），不落地成檔",
+         ok_stdout and not os.path.exists("-"),
+         "rc=%s out0=%r" % (r2.returncode, (r2.stdout or "")[:70]))
+
+    r3 = oneshot(["--dump-status", os.path.join(tmp, "noid.json")])
+    o3 = (r3.stdout or "") + (r3.stderr or "")
+    case("㊳ 沒給 --endpoint-id ⇒ 仍寫出檔案但要出聲（這份 dump 不知道屬於誰）",
+         r3.returncode == 0 and "WARN" in o3 and "endpoint-id" in o3,
+         "rc=%s out=%r" % (r3.returncode, o3[-150:]))
+
     # ── H. 看門狗 ───────────────────────────────────────────────────
-    case("㊱ 看門狗：自測沒有在 installer/ 旁邊留下 log 或產物",
+    case("㊴ 看門狗：自測沒有在 installer/ 旁邊留下 log 或產物",
          not any(n.startswith("edge_worker_") for n in os.listdir(HERE)),
          [n for n in os.listdir(HERE) if n.startswith("edge_worker_")])
 
@@ -1169,6 +1268,10 @@ def main():
     ap.add_argument("--chat-format", choices=("auto", "native", "chatml"), default="auto",
                     help="auto＝先委派 llama-server 的 chat template，失敗才回退手寫 ChatML")
     ap.add_argument("--log-dir", default=".")
+    ap.add_argument("--dump-status", metavar="PATH", default=None,
+                    help="★ 不起服務，直接把一份合契約的 /v1/edge/status JSON 寫到 PATH"
+                         "（用 '-' 表 stdout）。離線端（鴻蒙／Windows）只要跑這條一次，"
+                         "再由既有通道把檔案帶回來 —— 這就是 store-and-forward 的那一步。")
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
 
@@ -1183,6 +1286,17 @@ def main():
     CFG.chat_format, CFG.log_dir = args.chat_format, args.log_dir
     if args.threads:
         CFG.threads = args.threads
+
+    # ★ --dump-status：寫出狀態就結束。刻意**放在這裡**（早於模型與 llama-server 的檢查、
+    #   也早於 worker 啟動）—— 離線端要的是一條「不佔 GPU、不需要模型、不需要
+    #   llama-server、不開任何埠」就能跑完的指令；任何一個前置檢查都會讓它在目標機器上
+    #   跑不動，而「跑不動的指令」等於沒有這條路。
+    if args.dump_status is not None:
+        CFG.no_worker = True
+        if args.model:
+            CFG.model = os.path.abspath(args.model)
+        CFG.model_id = os.path.basename(CFG.model).replace(".gguf", "") or "remote-worker"
+        return dump_status(args.dump_status)
 
     if not os.path.isdir(CFG.log_dir):
         print("[Edge] [ERROR] --log-dir 不存在：%s" % CFG.log_dir)
