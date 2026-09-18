@@ -218,4 +218,4 @@ ON CONFLICT (model_id) DO NOTHING;
 -- 初始数据：超级管理者账号（注册后手动设 role）
 -- ============================================================
 -- 注册后执行：
--- UPDATE public.profiles SET role = 'super_admin' WHERE email = 'your@email.com';
+-- UPDATE public.profiles SET role = 'super_admin' WHERE email = 'alexchuang@powerauto.ai';
