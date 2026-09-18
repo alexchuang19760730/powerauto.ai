@@ -322,12 +322,16 @@ async function handleLogin(e) {
   hideMessage();
 
   try {
-    const { data, error } = await Auth.signIn(email, password);
-    if (error) throw error;
+    const resp = await Auth.signIn(email, password);
+    console.log('Login response:', resp);
+    if (resp.error) throw new Error(resp.error.message || '登录失败');
 
-    // Get user ID (Supabase token endpoint returns user at top level)
-    const userId = data.user?.id || data.id;
-    if (!userId) throw new Error('登录失败：无法获取用户信息');
+    const d = resp.data || resp;
+    console.log('Login data:', d);
+    // Supabase returns: { access_token, refresh_token, user: {id, email, ...} }
+    const userId = d.user?.id || d.id || d.sub;
+    console.log('User ID:', userId);
+    if (!userId) throw new Error('登录失败：无法获取用户信息。返回: ' + JSON.stringify(d).substring(0, 200));
 
     // 获取 profile
     const profile = await Auth.getProfile(userId);
