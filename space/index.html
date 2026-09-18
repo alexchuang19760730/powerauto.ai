@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的空间 — PowerAuto.ai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#a0a0b8;--heading:#f0f0ff;--accent:#6c5ce7;--accent2:#00cec9;--gradient:linear-gradient(135deg,#6c5ce7,#00cec9);--sidebar-w:260px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans SC','Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar-w);background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;z-index:10}
+.sidebar-header{padding:1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sidebar-header .logo{font-size:1.1rem;font-weight:700;color:var(--heading)}
+.sidebar-header .logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar-header .role-tag{font-size:.65rem;padding:2px 6px;border-radius:4px;font-weight:600}
+.sidebar-header .role-tag.user{background:rgba(0,206,201,.15);color:var(--accent2)}
+.sidebar-header .role-tag.admin{background:rgba(108,92,231,.15);color:var(--accent)}
+
+/* New chat button */
+.new-chat-btn{margin:.8rem;padding:.6rem;background:var(--gradient);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .2s}
+.new-chat-btn:hover{opacity:.9}
+
+/* Space list */
+.space-list{flex:1;overflow-y:auto;padding:.5rem}
+.space-item{padding:.6rem .8rem;border-radius:8px;cursor:pointer;font-size:.85rem;color:var(--text);transition:background .15s;display:flex;align-items:center;gap:.5rem;margin-bottom:2px}
+.space-item:hover{background:rgba(255,255,255,.05)}
+.space-item.active{background:rgba(108,92,231,.15);color:var(--heading)}
+.space-item .space-icon{font-size:.9rem;opacity:.6}
+.space-item .space-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.space-item .space-delete{opacity:0;font-size:.75rem;color:var(--error);transition:opacity .15s}
+.space-item:hover .space-delete{opacity:1}
+
+/* Sidebar footer */
+.sidebar-footer{padding:.8rem;border-top:1px solid var(--border)}
+.user-info{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#fff}
+.user-details{flex:1;overflow:hidden}
+.user-name{font-size:.85rem;color:var(--heading);font-weight:500}
+.user-email{font-size:.7rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-footer .nav-links{display:flex;gap:.5rem}
+.sidebar-footer .nav-link{flex:1;padding:.4rem;text-align:center;font-size:.75rem;color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all .15s;text-decoration:none}
+.sidebar-footer .nav-link:hover{border-color:var(--accent);color:var(--heading)}
+
+/* Main content */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;height:100vh}
+
+/* Top bar */
+.topbar{padding:.8rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.topbar-left{display:flex;align-items:center;gap:1rem}
+.model-select{padding:.4rem .8rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--heading);font-size:.8rem}
+.topbar-right{display:flex;align-items:center;gap:.8rem}
+.stat-badge{font-size:.7rem;color:var(--text);padding:3px 8px;background:var(--bg);border-radius:4px}
+
+/* Chat area */
+.chat-area{flex:1;overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+.chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.chat-empty h2{font-size:1.5rem;color:var(--heading);margin-bottom:.5rem}
+.chat-empty p{color:var(--text);font-size:.9rem;max-width:400px}
+.chat-empty .quick-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.5rem;justify-content:center}
+.quick-action{padding:.5rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:.8rem;color:var(--text);cursor:pointer;transition:all .15s}
+.quick-action:hover{border-color:var(--accent);color:var(--heading)}
+
+/* Messages */
+.msg{display:flex;gap:.8rem;max-width:800px;width:100%;margin:0 auto}
+.msg-avatar{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
+.msg.user .msg-avatar{background:rgba(0,206,201,.15);color:var(--accent2)}
+.msg.assistant .msg-avatar{background:rgba(108,92,231,.15);color:var(--accent)}
+.msg-content{flex:1;padding:.8rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;font-size:.9rem;line-height:1.6;color:var(--text)}
+.msg.user .msg-content{border-color:rgba(0,206,201,.2)}
+.msg.assistant .msg-content{border-color:rgba(108,92,231,.2)}
+
+/* Input area */
+.input-area{padding:1rem 1.5rem;border-top:1px solid var(--border)}
+.input-wrapper{max-width:800px;margin:0 auto;display:flex;gap:.5rem;align-items:flex-end}
+.input-wrapper textarea{flex:1;padding:.7rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--heading);font-size:.9rem;font-family:inherit;resize:none;max-height:120px;line-height:1.5}
+.input-wrapper textarea:focus{outline:none;border-color:var(--accent)}
+.send-btn{padding:.7rem 1.2rem;background:var(--gradient);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:.9rem;transition:opacity .2s;white-space:nowrap}
+.send-btn:hover{opacity:.9}
+.send-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Token counter */
+.token-info{text-align:center;font-size:.7rem;color:var(--text);opacity:.5;margin-top:.3rem;max-width:800px;margin-left:auto;margin-right:auto}
+
+/* Stats cards */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1rem;max-width:800px;margin:0 auto 1rem}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:center}
+.stat-card .stat-value{font-size:1.5rem;font-weight:700;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-card .stat-label{font-size:.75rem;color:var(--text);margin-top:.2rem}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .3s}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .stats-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">⚡ <span>PowerAuto</span></div>
+    <span class="role-tag user" id="roleTag">用户</span>
+  </div>
+
+  <button class="new-chat-btn" onclick="createNewSpace()">+ 新对话</button>
+
+  <div class="space-list" id="spaceList">
+    <div style="padding:1rem;text-align:center;color:var(--text);font-size:.8rem;opacity:.5">
+      加载中...
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-details">
+        <div class="user-name" id="userName">未登录</div>
+        <div class="user-email" id="userEmail">—</div>
+      </div>
+    </div>
+    <div class="nav-links">
+      <a class="nav-link" href="../models/">模型市场</a>
+      <a class="nav-link" href="../playground/">Playground</a>
+      <a class="nav-link" id="adminLink" href="../admin/" style="display:none">管理后台</a>
+      <a class="nav-link" href="#" onclick="handleLogout()">退出</a>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="nav-link" onclick="toggleSidebar()" style="display:none;border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.8rem" id="menuBtn">☰</button>
+      <select class="model-select" id="modelSelect" onchange="onModelChange()">
+        <optgroup label="☁️ 云端免费">
+          <option value="Qwen/Qwen3-1.7B">Qwen3-1.7B</option>
+          <option value="Qwen/Qwen3-4B">Qwen3-4B</option>
+          <option value="Qwen/Qwen3-8B">Qwen3-8B</option>
+          <option value="meta-llama/Llama-3.1-8B-Instruct">Llama 3.1 8B</option>
+          <option value="microsoft/Phi-3.5-mini-instruct">Phi 3.5 Mini</option>
+        </optgroup>
+        <optgroup label="💻 本地服务" id="localModels">
+          <option value="local">Mac M4 (Qwen3.6-35B)</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="topbar-right">
+      <span class="stat-badge" id="msgCount">0 条消息</span>
+      <span class="stat-badge" id="tokenCount">0 tokens</span>
+    </div>
+  </div>
+
+  <div class="chat-area" id="chatArea">
+    <div class="chat-empty" id="chatEmpty">
+      <h2>👋 欢迎回来</h2>
+      <p>选择一个模型开始对话，或从左侧选择历史对话。</p>
+      <div class="quick-actions">
+        <div class="quick-action" onclick="quickChat('帮我写一个 Python 快速排序')">📝 写代码</div>
+        <div class="quick-action" onclick="quickChat('解释一下 Transformer 的工作原理')">🧠 解释概念</div>
+        <div class="quick-action" onclick="quickChat('帮我优化这段代码的性能')">⚡ 优化代码</div>
+        <div class="quick-action" onclick="quickChat('翻译成英文：人工智能正在改变世界')">🌐 翻译</div>
+      </div>
+    </div>
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="stat-value" id="totalChats">0</div><div class="stat-label">总对话</div></div>
+      <div class="stat-card"><div class="stat-value" id="totalTokens">0</div><div class="stat-label">总 Tokens</div></div>
+      <div class="stat-card"><div class="stat-value" id="avgLatency">—</div><div class="stat-label">平均延迟</div></div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-wrapper">
+      <textarea id="chatInput" placeholder="输入消息... (Enter 发送，Shift+Enter 换行)" rows="1" onkeydown="handleKeydown(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">发送</button>
+    </div>
+    <div class="token-info" id="tokenInfo">选择模型开始对话</div>
+  </div>
+</div>
+
+<script src="../auth/config.js"></script>
+<script>
+// ============================================================
+// State
+// ============================================================
+let currentUser = null;
+let currentProfile = null;
+let currentSpace = null;
+let spaces = [];
+let totalTokens = 0;
+
+// ============================================================
+// Init
+// ============================================================
+(async () => {
+  if (!supabase) {
+    document.getElementById('chatEmpty').innerHTML = '<h2>⚠️ Supabase 未配置</h2><p>请先设置 auth/config.js</p>';
+    return;
+  }
+
+  const user = await Auth.getUser();
+  if (!user) {
+    window.location.href = '../auth/';
+    return;
+  }
+
+  currentUser = user;
+  currentProfile = await Auth.getProfile(user.id);
+
+  // 更新 UI
+  updateUserInfo();
+  await loadSpaces();
+
+  // 监听 auth 变化
+  Auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') window.location.href = '../auth/';
+  });
+})();
+
+function updateUserInfo() {
+  if (!currentProfile) return;
+  
+  const name = currentProfile.display_name || currentUser.email.split('@')[0];
+  document.getElementById('userName').textContent = name;
+  document.getElementById('userEmail').textContent = currentUser.email;
+  document.getElementById('userAvatar').textContent = name[0].toUpperCase();
+
+  // 角色标签
+  const roleTag = document.getElementById('roleTag');
+  const roleNames = { super_admin: '超级管理者', admin: '管理者', user: '用户' };
+  roleTag.textContent = roleNames[currentProfile.role] || '用户';
+  roleTag.className = 'role-tag ' + currentProfile.role;
+
+  // 管理员链接
+  if (Auth.isAdmin(currentProfile)) {
+    document.getElementById('adminLink').style.display = 'block';
+  }
+}
+
+// ============================================================
+// Spaces
+// ============================================================
+async function loadSpaces() {
+  spaces = await Space.list(currentUser.id);
+  renderSpaceList();
+}
+
+function renderSpaceList() {
+  const list = document.getElementById('spaceList');
+  if (spaces.length === 0) {
+    list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text);font-size:.8rem;opacity:.5">暂无对话<br>点击上方 "+ 新对话" 开始</div>';
+    return;
+  }
+
+  list.innerHTML = spaces.map(s => `
+    <div class="space-item ${currentSpace?.id === s.id ? 'active' : ''}" onclick="openSpace('${s.id}')">
+      <span class="space-icon">💬</span>
+      <span class="space-title">${escapeHtml(s.title)}</span>
+      <span class="space-delete" onclick="event.stopPropagation();deleteSpace('${s.id}')">✕</span>
+    </div>
+  `).join('');
+}
+
+async function createNewSpace() {
+  const space = await Space.create(currentUser.id, '新对话', document.getElementById('modelSelect').value);
+  if (space) {
+    spaces.unshift(space);
+    renderSpaceList();
+    openSpace(space.id);
+  }
+}
+
+async function openSpace(spaceId) {
+  currentSpace = spaces.find(s => s.id === spaceId);
+  if (!currentSpace) return;
+
+  renderSpaceList();
+  document.getElementById('modelSelect').value = currentSpace.model_id;
+
+  // 渲染消息
+  const area = document.getElementById('chatArea');
+  const empty = document.getElementById('chatEmpty');
+  const stats = document.getElementById('statsGrid');
+  
+  if (currentSpace.messages && currentSpace.messages.length > 0) {
+    empty.style.display = 'none';
+    stats.style.display = 'none';
+    
+    const msgsHtml = currentSpace.messages.map(m => `
+      <div class="msg ${m.role}">
+        <div class="msg-avatar">${m.role === 'user' ? (currentProfile?.display_name?.[0] || 'U') : 'AI'}</div>
+        <div class="msg-content">${escapeHtml(m.content)}</div>
+      </div>
+    `).join('');
+    
+    area.innerHTML = msgsHtml;
+    area.scrollTop = area.scrollHeight;
+  } else {
+    empty.style.display = 'flex';
+    stats.style.display = 'grid';
+    area.innerHTML = '';
+    area.appendChild(empty);
+    area.appendChild(stats);
+  }
+
+  updateTokenInfo();
+}
+
+async function deleteSpace(spaceId) {
+  if (!confirm('确定删除这个对话？')) return;
+  await Space.delete(spaceId);
+  spaces = spaces.filter(s => s.id !== spaceId);
+  if (currentSpace?.id === spaceId) {
+    currentSpace = null;
+    document.getElementById('chatArea').innerHTML = document.getElementById('chatEmpty')?.outerHTML || '';
+  }
+  renderSpaceList();
+}
+
+// ============================================================
+// Chat
+// ============================================================
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !currentSpace) return;
+
+  // 如果没有空间，先创建
+  if (!currentSpace) {
+    await createNewSpace();
+  }
+
+  input.value = '';
+  autoResize(input);
+
+  // 添加用户消息
+  await Space.addMessage(currentSpace.id, 'user', text);
+  
+  // 显示用户消息
+  appendMessage('user', text);
+
+  // 调用推理 API
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.textContent = '思考中...';
+
+  try {
+    const model = document.getElementById('modelSelect').value;
+    const reply = await callInference(model, currentSpace.messages);
+    
+    await Space.addMessage(currentSpace.id, 'assistant', reply);
+    appendMessage('assistant', reply);
+    totalTokens += estimateTokens(reply);
+    updateTokenInfo();
+  } catch (err) {
+    appendMessage('assistant', '❌ 错误: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '发送';
+  }
+}
+
+function appendMessage(role, content) {
+  const area = document.getElementById('chatArea');
+  const empty = document.getElementById('chatEmpty');
+  const stats = document.getElementById('statsGrid');
+  if (empty) empty.style.display = 'none';
+  if (stats) stats.style.display = 'none';
+
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `
+    <div class="msg-avatar">${role === 'user' ? (currentProfile?.display_name?.[0] || 'U') : 'AI'}</div>
+    <div class="msg-content">${escapeHtml(content)}</div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+// ============================================================
+// Inference
+// ============================================================
+const CF_WORKER = 'https://powerauto-inference.powerauto-ai.workers.dev';
+const MAC_SERVER = 'http://192.168.101.90:8080';
+
+async function callInference(model, messages) {
+  // 本地模型走 Mac server
+  if (model === 'local') {
+    const resp = await fetch(MAC_SERVER + '/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'local',
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        max_tokens: 1024,
+        temperature: 0.7
+      })
+    });
+    const data = await resp.json();
+    return data.choices?.[0]?.message?.content || '(无响应)';
+  }
+
+  // 云端模型走 Cloudflare Worker
+  const resp = await fetch(CF_WORKER, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: model,
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      max_tokens: 1024,
+      temperature: 0.7
+    })
+  });
+  
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error(`API 错误 ${resp.status}: ${err}`);
+  }
+  
+  const data = await resp.json();
+  return data.choices?.[0]?.message?.content || '(无响应)';
+}
+
+function estimateTokens(text) {
+  return Math.ceil(text.length / 3);
+}
+
+function updateTokenInfo() {
+  const count = currentSpace?.messages?.length || 0;
+  document.getElementById('msgCount').textContent = count + ' 条消息';
+  document.getElementById('tokenCount').textContent = totalTokens.toLocaleString() + ' tokens';
+  document.getElementById('totalChats').textContent = spaces.length;
+  document.getElementById('totalTokens').textContent = totalTokens > 1000 ? (totalTokens/1000).toFixed(1) + 'k' : totalTokens;
+  document.getElementById('tokenInfo').textContent = `已发 ${count} 条消息 · ${totalTokens} tokens`;
+}
+
+// ============================================================
+// Quick chat
+// ============================================================
+function quickChat(text) {
+  if (!currentSpace) {
+    createNewSpace().then(() => {
+      document.getElementById('chatInput').value = text;
+      sendMessage();
+    });
+  } else {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+  }
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function handleKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function onModelChange() {
+  if (currentSpace) {
+    Space.update(currentSpace.id, { model_id: document.getElementById('modelSelect').value });
+  }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+async function handleLogout() {
+  await Auth.signOut();
+  window.location.href = '../auth/';
+}
+
+// Mobile menu
+if (window.innerWidth <= 768) {
+  document.getElementById('menuBtn').style.display = 'block';
+}
+</script>
+</body>
+</html>
