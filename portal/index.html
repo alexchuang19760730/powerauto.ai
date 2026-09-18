@@ -143,6 +143,12 @@ function applyRole(){
     + (hidden.length
         ? `　·　已隐藏：<b>${hidden.join("、")}</b>　—— 这只是<b>显示</b>层：HTML 谁都能抓，`
           + `真正的闸门必须在服务器端。`
+          + (ROLE_SEEN.startsWith("default")
+              ? `<br>★ 这一页<b>预设是最小权限</b>（公开部署，忘了接闸门就会自动全开）。`
+                + `要立刻看到全部：<a href="?role=superuser"><b>?role=superuser</b></a>，`
+                + `或由登录闸门设 <code>window.POWERAUTO_ROLE</code>。`
+                + `<b>机台的四维（资产／能力／进度／复盘）在 ③，需要 admin 或 superuser。</b>`
+              : "")
         : `　·　全部分区可见。`);
 }
 const LS_ACTIVE = "powerauto.active_endpoint";
