@@ -373,11 +373,18 @@ async function handleRegister(e) {
     const { data, error } = await Auth.signUp(email, password, name);
     if (error) throw error;
 
-    if (data.user && !data.session) {
+    // If auto-confirmed, go to space; otherwise show confirmation message
+    const userId = data.user?.id || data.id;
+    if (userId && !data.session) {
       showMessage('注册成功！请查收邮箱确认链接，然后登录。', 'success');
       setTimeout(() => switchTab('login'), 3000);
-    } else {
+    } else if (userId) {
+      // Auto-confirmed, store token and go to space
+      if (data.access_token) localStorage.setItem('sb_access_token', data.access_token);
       window.location.href = '../space/';
+    } else {
+      showMessage('注册成功！请查收邮箱确认链接。', 'success');
+      setTimeout(() => switchTab('login'), 3000);
     }
   } catch (err) {
     showMessage(err.message || '注册失败，请稍后重试', 'error');
