@@ -80,8 +80,8 @@ ul{margin:4px 0;padding-left:18px}li{margin:2px 0}
 
 </div>
 <div id="s3" class="sect">
-<h2>③ 机队：本机与跨机的资产能力</h2>
-<div class="small">每一端都带着「未量测」清单 —— 缺席要出声，不画成绿灯。</div>
+<h2>③ 机台：本机与跨机的资产／能力／进度／复盘</h2>
+<div class="small">每一端四个维度都给：<b>资产</b>（上报档与证据指针在哪）、<b>能力</b>（只列验证过的）、<b>进度</b>（加入单的完成度 —— 每一格的判准写在 <code>join.json</code> 里，由 CGC 那边<b>实算</b>，不是端点自己宣告的）、<b>复盘</b>（历次建置的能力数与未量测数变化）。★ 每一端都带着「未量测」清单 —— 缺席要出声，不画成绿灯。<span id="join_sum"></span></div>
 <div class="cards" id="fleet_cards"></div>
 
 </div>
@@ -197,6 +197,42 @@ async function probeAll(){
   await Promise.all(EPS.map(async ep => { HEALTH[ep.id] = await probeOne(ep); }));
   render();
 }
+// ── 機台的四個維度：資產／能力／進度／復盤（資料都來自 fleet_export.json，本頁只轉述）
+function joinBlock(e){
+  const j = e.join;
+  if(!j) return `<div style="margin-top:6px"><b>加入進度</b>
+    <div class="ev"><span class="muted">join.json 沒有登記它（不需要「加入」—— 例如本機或已在網路上）</span></div></div>`;
+  const cls = st => st==="done" ? "t-green" : (st==="todo"||st==="unknown" ? "t-amber" : "t-grey");
+  const items = (j.items||[]).map(i=>`<li><span class="tag ${cls(i.status)}">${esc(i.status)}</span> ${esc(i.title)}`
+      + (i.weak?' <span class="tag t-grey">弱檢查</span>':"")
+      + `<div class="ev">${esc(i.evidence||"")}</div></li>`).join("");
+  const ch = j.channel||{}, p = ch.primary||{};
+  return `<div style="margin-top:6px"><b>加入進度</b>
+    <span class="tag ${j.open===0?"t-green":"t-amber"}">${esc(j.bar)}</span>
+    <div class="ev">操作單：<code>${esc(j.doc)}</code>（產生自 join.json，不要手改）</div>
+    <div class="ev">通道：${esc(p.primary_kind||"?")}`
+    + (p.write_path?` → <code>${esc(p.write_path)}</code>`:"")
+    + (p.branch?`　branch <code>${esc(p.branch)}</code>`:"") + `</div>`
+    + (p.blocker?`<div class="ev">★ ${esc(p.blocker)}</div>`:"")
+    + `<details><summary>對方 agent 要做的事（${esc(j.total)} 項，未完成 ${esc(j.open)}）</summary>
+       <ul class="small" style="padding-left:18px;margin-top:4px">${items}</ul></details></div>`;
+}
+function assetsBlock(e){
+  const a = e.assets||{};
+  const m = Object.entries(a.metrics||{}).map(([k,v])=>`<b>${esc(k)}</b>=${esc(v)}`).join("　");
+  return `<div style="margin-top:6px"><b>資產</b>
+    <div class="ev">上報檔 <code>${esc(a.report_path||"（無）")}</code>　能力證據指針 ${esc(a.evidence_pointers??0)} 條`
+    + `　本輪跑了 ${esc(a.what_ran_n??0)} 件</div>`
+    + (m?`<div class="ev">讀數：${m}</div>`:"") + `</div>`;
+}
+function retroBlock(e){
+  const r = e.retro||[];
+  if(!r.length) return `<div style="margin-top:6px"><b>復盤</b>
+    <div class="ev"><span class="muted">還沒有歷史（fleet_status.jsonl 裡沒有它的紀錄）</span></div></div>`;
+  const seq = r.map(x=>`${esc(String(x.ts||"").slice(5,16))} ${esc(x.chip)}`
+      + `<span class="muted">(能力${esc(x.caps)}/未量${esc(x.unmeasured)})</span>`).join(" → ");
+  return `<div style="margin-top:6px"><b>復盤</b>（歷次建置最後 ${r.length} 次）<div class="ev">${seq}</div></div>`;
+}
 function chip(st){
   // ★ foreign / unverified 是為了不讓觀察器說謊：可達 ≠ 是我們的服務、≠ 身分驗過了。
   const m = {live:["t-green","LIVE"], unknown:["t-grey","unknown"], blocked:["t-amber","blocked"],
@@ -255,14 +291,23 @@ function render(){
     </div>`;
   }).join("");
 
+  const JS = EXPORT.join_summary || {};
+  document.getElementById("join_sum").innerHTML = JS.endpoints_with_kit
+    ? `　·　加入单：<b>${JS.endpoints_with_kit}</b> 个端点有操作单（已加入 ${JS.joined}），未完成 <b>${JS.open_items}</b>／${JS.items} 项`
+    : "";
   document.getElementById("fleet_cards").innerHTML = (EXPORT.endpoints||[]).map(e=>`
     <div class="card">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
         <div><b>${esc(e.name)}</b><div class="small"><code>${esc(e.id)}</code>　${esc(e.platform)}/${esc(e.arch)}</div></div>
         <span class="tag t-grey">${esc(e.chip)}</span></div>
       <div class="small" style="margin-top:6px">${esc(e.role)}</div>
-      <div style="margin-top:6px"><b>能力</b></div><ul class="small">${(e.capabilities||[]).map(c=>`<li>${esc(c)}</li>`).join("")}</ul>
-      <div><b>未量测</b></div><ul class="small">${(e.not_measured||[]).map(c=>`<li>${esc(c)}</li>`).join("")||"<li>（无）</li>"}</ul>
+      ${assetsBlock(e)}
+      <div style="margin-top:6px"><b>能力</b>（每一條都指到真實檔案裡的子串）</div>
+      <ul class="small">${(e.capabilities||[]).map(c=>`<li>${esc(c)}</li>`).join("")}</ul>
+      <div><b>未量测</b>（缺席要出声）</div>
+      <ul class="small">${(e.not_measured||[]).map(c=>`<li>${esc(c)}</li>`).join("")||"<li>（无）</li>"}</ul>
+      ${joinBlock(e)}
+      ${retroBlock(e)}
     </div>`).join("");
 
   const T = EXPORT.trend, days = T.days, miss = T.missing_label;
