@@ -130,9 +130,13 @@ const ROLE_SEEN = ROLES.includes(_want) ? "explicit" : "default（最小權限�
 // 誰看得到哪幾區。★ 這一層是**顯示**，不是閘門 —— HTML 任何人都抓得到；
 //   真正的閘門必須在伺服器端，而 GitHub Pages 不跑 PHP ⇒ 只能用 Cloudflare（見 README §4b）。
 const SECTION_NAMES = {s1:"端点切换", s2:"端侧 AI 目标", s3:"机队资产能力",
-                       s4:"七日趋势", s5:"动能"};
-const SECTION_ORDER = ["s1","s2","s3","s4","s5"];
-const SECTIONS = {superuser: SECTION_ORDER, admin: ["s1","s2","s3"], user: ["s1"]}[ROLE];
+                       s4:"七日趋势", s5:"动能",
+                       // ★ s6 是「本机的内网拓扑 + 每个服务的绑定与认证」—— 与 s3 同一类运维信息，
+                       //   所以要和 s3 同样的角色才看得到。第一版漏了它 => 未登入的访客看得到
+                       //   我们的内网地址与端口绑定，而机台卡片却要 admin。那不是权限，是漏了。
+                       s6:"局域网（本机网段与服务绑定）"};
+const SECTION_ORDER = ["s1","s2","s3","s4","s5","s6"];
+const SECTIONS = {superuser: SECTION_ORDER, admin: ["s1","s2","s3","s6"], user: ["s1"]}[ROLE];
 function applyRole(){
   SECTION_ORDER.forEach(id=>{
     const el = document.getElementById(id);
