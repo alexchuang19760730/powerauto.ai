@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理后台 — PowerAuto.ai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#a0a0b8;--heading:#f0f0ff;--accent:#6c5ce7;--accent2:#00cec9;--gradient:linear-gradient(135deg,#6c5ce7,#00cec9);--error:#ff6b6b;--success:#51cf66;--warning:#ffd43b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans SC','Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* Nav */
+.admin-nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.admin-nav .logo{font-size:1.1rem;font-weight:700;color:var(--heading)}
+.admin-nav .logo span{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.admin-nav .nav-right{display:flex;align-items:center;gap:1rem}
+.admin-nav .nav-link{color:var(--text);font-size:.85rem;text-decoration:none;transition:color .2s}
+.admin-nav .nav-link:hover{color:var(--heading)}
+.admin-nav .user-badge{padding:.3rem .8rem;border-radius:6px;font-size:.75rem;font-weight:600;background:rgba(255,107,107,.15);color:var(--error)}
+
+/* Layout */
+.admin-layout{display:flex;min-height:calc(100vh - 56px)}
+.admin-sidebar{width:200px;background:var(--card);border-right:1px solid var(--border);padding:1rem 0}
+.admin-sidebar .nav-item{padding:.6rem 1.5rem;font-size:.85rem;color:var(--text);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:.5rem}
+.admin-sidebar .nav-item:hover{background:rgba(255,255,255,.03);color:var(--heading)}
+.admin-sidebar .nav-item.active{background:rgba(108,92,231,.1);color:var(--accent);border-right:2px solid var(--accent)}
+.admin-content{flex:1;padding:2rem;overflow-y:auto}
+
+/* Page header */
+.page-header{margin-bottom:2rem}
+.page-header h1{font-size:1.5rem;color:var(--heading);margin-bottom:.3rem}
+.page-header p{font-size:.85rem;color:var(--text)}
+
+/* Stats cards */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem}
+.stat-card .stat-label{font-size:.75rem;color:var(--text);margin-bottom:.3rem}
+.stat-card .stat-value{font-size:1.8rem;font-weight:700;color:var(--heading)}
+.stat-card .stat-sub{font-size:.7rem;color:var(--text);margin-top:.2rem}
+
+/* Tables */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{text-align:left;padding:.7rem 1rem;font-size:.75rem;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.data-table td{padding:.7rem 1rem;font-size:.85rem;border-bottom:1px solid var(--border)}
+.data-table tr:hover td{background:rgba(255,255,255,.02)}
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:600}
+.badge.super_admin{background:rgba(255,107,107,.15);color:var(--error)}
+.badge.admin{background:rgba(108,92,231,.15);color:var(--accent)}
+.badge.user{background:rgba(0,206,201,.15);color:var(--accent2)}
+.badge.cloud{background:rgba(81,207,102,.15);color:var(--success)}
+.badge.mac{background:rgba(255,212,59,.15);color:var(--warning)}
+.badge.active{background:rgba(81,207,102,.15);color:var(--success)}
+.badge.inactive{background:rgba(255,107,107,.15);color:var(--error)}
+
+/* Buttons */
+.btn{padding:.5rem 1rem;border-radius:8px;font-size:.8rem;font-weight:500;border:none;cursor:pointer;transition:all .15s}
+.btn-sm{padding:.3rem .6rem;font-size:.75rem}
+.btn-primary{background:var(--gradient);color:#fff}
+.btn-danger{background:rgba(255,107,107,.15);color:var(--error);border:1px solid rgba(255,107,107,.2)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn:hover{opacity:.85}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:200}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:500px}
+.modal h3{font-size:1.1rem;color:var(--heading);margin-bottom:1rem}
+.modal .form-group{margin-bottom:1rem}
+.modal label{display:block;font-size:.8rem;color:var(--text);margin-bottom:.3rem}
+.modal input,.modal select,.modal textarea{width:100%;padding:.5rem .8rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--heading);font-size:.85rem}
+.modal .modal-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem}
+
+/* Sections */
+.section{display:none}
+.section.active{display:block}
+
+/* Tabs */
+.tab-bar{display:flex;gap:.5rem;margin-bottom:1.5rem}
+.tab-btn{padding:.5rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.85rem;cursor:pointer;transition:all .15s}
+.tab-btn.active{background:rgba(108,92,231,.15);color:var(--accent);border-color:var(--accent)}
+
+/* Loading */
+.loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:300}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:768px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .admin-sidebar{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+</div>
+
+<!-- Nav -->
+<nav class="admin-nav">
+  <div class="logo">⚡ <span>PowerAuto</span>.ai — 管理后台</div>
+  <div class="nav-right">
+    <a class="nav-link" href="../space/">← 我的空间</a>
+    <a class="nav-link" href="../models/">模型市场</a>
+    <span class="user-badge" id="adminRole">管理员</span>
+  </div>
+</nav>
+
+<!-- Layout -->
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <div class="admin-sidebar">
+    <div class="nav-item active" onclick="switchSection('dashboard')">📊 仪表板</div>
+    <div class="nav-item" onclick="switchSection('users')">👥 用户管理</div>
+    <div class="nav-item" onclick="switchSection('models')">🤖 模型管理</div>
+    <div class="nav-item" onclick="switchSection('logs')">📋 请求日志</div>
+    <div class="nav-item" onclick="switchSection('settings')" id="settingsNav" style="display:none">⚙️ 系统设置</div>
+  </div>
+
+  <!-- Content -->
+  <div class="admin-content">
+
+    <!-- Dashboard -->
+    <div class="section active" id="sec-dashboard">
+      <div class="page-header">
+        <h1>仪表板</h1>
+        <p>系统概览与关键指标</p>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">总用户</div>
+          <div class="stat-value" id="statUsers">—</div>
+          <div class="stat-sub">注册用户总数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">总模型</div>
+          <div class="stat-value" id="statModels">—</div>
+          <div class="stat-sub">可用模型数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">总请求</div>
+          <div class="stat-value" id="statRequests">—</div>
+          <div class="stat-sub">API 调用次数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">总 Tokens</div>
+          <div class="stat-value" id="statTokens">—</div>
+          <div class="stat-sub">消耗 token 总量</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <table class="data-table">
+          <thead><tr><th>最近用户</th><th>邮箱</th><th>角色</th><th>注册时间</th></tr></thead>
+          <tbody id="recentUsers"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="section" id="sec-users">
+      <div class="page-header">
+        <h1>用户管理</h1>
+        <p>管理所有注册用户和角色权限</p>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="filterUsers('all', this)">全部</button>
+        <button class="tab-btn" onclick="filterUsers('user', this)">普通用户</button>
+        <button class="tab-btn" onclick="filterUsers('admin', this)">管理者</button>
+        <button class="tab-btn" onclick="filterUsers('super_admin', this)">超级管理者</button>
+      </div>
+      <div class="table-card">
+        <table class="data-table">
+          <thead><tr><th>用户</th><th>邮箱</th><th>角色</th><th>请求次数</th><th>最后活跃</th><th>操作</th></tr></thead>
+          <tbody id="usersTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Models -->
+    <div class="section" id="sec-models">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:center">
+        <div><h1>模型管理</h1><p>管理可用模型和部署状态</p></div>
+        <button class="btn btn-primary" onclick="showAddModel()">+ 添加模型</button>
+      </div>
+      <div class="table-card">
+        <table class="data-table">
+          <thead><tr><th>模型</th><th>类别</th><th>后端</th><th>状态</th><th>请求数</th><th>操作</th></tr></thead>
+          <tbody id="modelsTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="section" id="sec-logs">
+      <div class="page-header">
+        <h1>请求日志</h1>
+        <p>最近的 API 调用记录</p>
+      </div>
+      <div class="table-card">
+        <table class="data-table">
+          <thead><tr><th>时间</th><th>用户</th><th>模型</th><th>输入</th><th>输出</th><th>延迟</th><th>状态</th></tr></thead>
+          <tbody id="logsTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="section" id="sec-settings">
+      <div class="page-header">
+        <h1>系统设置</h1>
+        <p>仅超级管理者可访问</p>
+      </div>
+      <div class="table-card" style="padding:1.5rem">
+        <p style="color:var(--text);font-size:.85rem">系统设置功能开发中...</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal: Edit User Role -->
+<div class="modal-overlay" id="roleModal">
+  <div class="modal">
+    <h3>修改用户角色</h3>
+    <div class="form-group">
+      <label>用户</label>
+      <input type="text" id="roleModalUser" disabled>
+    </div>
+    <div class="form-group">
+      <label>角色</label>
+      <select id="roleModalRole">
+        <option value="user">普通用户</option>
+        <option value="admin">管理者</option>
+        <option value="super_admin">超级管理者</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('roleModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveUserRole()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Model -->
+<div class="modal-overlay" id="modelModal">
+  <div class="modal">
+    <h3>添加/编辑模型</h3>
+    <div class="form-group">
+      <label>模型 ID</label>
+      <input type="text" id="modelId" placeholder="qwen3-4b">
+    </div>
+    <div class="form-group">
+      <label>显示名称</label>
+      <input type="text" id="modelName" placeholder="Qwen3-4B">
+    </div>
+    <div class="form-group">
+      <label>描述</label>
+      <input type="text" id="modelDesc" placeholder="端侧旗舰模型">
+    </div>
+    <div class="form-group">
+      <label>类别</label>
+      <select id="modelCategory">
+        <option value="chat">Chat</option>
+        <option value="code">Code</option>
+        <option value="vision">Vision</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>后端</label>
+      <select id="modelBackend">
+        <option value="cloud">☁️ Cloud (HF)</option>
+        <option value="mac">💻 Mac M4</option>
+        <option value="local">🖥️ Windows</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>HF Model ID（云端模型）</label>
+      <input type="text" id="modelHfId" placeholder="Qwen/Qwen3-4B">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modelModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveModel()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="../auth/config.js"></script>
+<script>
+// ============================================================
+// State
+// ============================================================
+let currentUser = null;
+let currentProfile = null;
+let allUsers = [];
+let allModels = [];
+let editingUserId = null;
+let editingModelId = null;
+
+// ============================================================
+// Init
+// ============================================================
+(async () => {
+  if (!supabase) {
+    document.getElementById('loadingOverlay').innerHTML = '<div style="text-align:center"><h2>⚠️ Supabase 未配置</h2><p>请先设置 auth/config.js</p></div>';
+    return;
+  }
+
+  const user = await Auth.getUser();
+  if (!user) { window.location.href = '../auth/'; return; }
+
+  currentUser = user;
+  currentProfile = await Auth.getProfile(user.id);
+
+  if (!Auth.isAdmin(currentProfile)) {
+    document.getElementById('loadingOverlay').innerHTML = '<div style="text-align:center"><h2>🚫 权限不足</h2><p>仅管理员可访问</p><a href="../space/" style="color:var(--accent2)">← 返回空间</a></div>';
+    return;
+  }
+
+  document.getElementById('loadingOverlay').style.display = 'none';
+
+  // 超级管理者专属
+  if (Auth.isSuperAdmin(currentProfile)) {
+    document.getElementById('settingsNav').style.display = 'flex';
+    document.getElementById('adminRole').textContent = '超级管理者';
+  } else {
+    document.getElementById('adminRole').textContent = '管理者';
+  }
+
+  await Promise.all([loadDashboard(), loadUsers(), loadModels()]);
+})();
+
+// ============================================================
+// Navigation
+// ============================================================
+function switchSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  document.querySelectorAll('.admin-sidebar .nav-item').forEach(n => n.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// ============================================================
+// Dashboard
+// ============================================================
+async function loadDashboard() {
+  const stats = await Admin.getStats();
+  document.getElementById('statUsers').textContent = stats.totalUsers;
+  document.getElementById('statModels').textContent = stats.totalModels;
+  document.getElementById('statRequests').textContent = stats.totalRequests.toLocaleString();
+
+  // Recent users
+  const users = await Admin.listUsers();
+  document.getElementById('recentUsers').innerHTML = users.slice(0, 5).map(u => `
+    <tr>
+      <td>${escapeHtml(u.display_name || '—')}</td>
+      <td>${escapeHtml(u.email)}</td>
+      <td><span class="badge ${u.role}">${roleName(u.role)}</span></td>
+      <td>${u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text);padding:2rem">暂无数据</td></tr>';
+}
+
+// ============================================================
+// Users
+// ============================================================
+async function loadUsers() {
+  allUsers = await Admin.listUsers();
+  renderUsers(allUsers);
+}
+
+function renderUsers(users) {
+  document.getElementById('usersTable').innerHTML = users.map(u => `
+    <tr>
+      <td>${escapeHtml(u.display_name || '—')}</td>
+      <td>${escapeHtml(u.email)}</td>
+      <td><span class="badge ${u.role}">${roleName(u.role)}</span></td>
+      <td>${u.total_requests || 0}</td>
+      <td>${u.last_active_at ? new Date(u.last_active_at).toLocaleString() : '—'}</td>
+      <td>
+        <button class="btn btn-sm btn-ghost" onclick="editUserRole('${u.id}', '${escapeHtml(u.email)}', '${u.role}')">改角色</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text);padding:2rem">暂无用户</td></tr>';
+}
+
+function filterUsers(role, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = role === 'all' ? allUsers : allUsers.filter(u => u.role === role);
+  renderUsers(filtered);
+}
+
+function editUserRole(userId, email, currentRole) {
+  editingUserId = userId;
+  document.getElementById('roleModalUser').value = email;
+  document.getElementById('roleModalRole').value = currentRole;
+  document.getElementById('roleModal').classList.add('show');
+}
+
+async function saveUserRole() {
+  if (!editingUserId) return;
+  const newRole = document.getElementById('roleModalRole').value;
+  await Admin.updateUserRole(editingUserId, newRole);
+  closeModal('roleModal');
+  await loadUsers();
+  await loadDashboard();
+}
+
+// ============================================================
+// Models
+// ============================================================
+async function loadModels() {
+  allModels = await Admin.listModels();
+  renderModels(allModels);
+}
+
+function renderModels(models) {
+  document.getElementById('modelsTable').innerHTML = models.map(m => `
+    <tr>
+      <td><strong>${escapeHtml(m.display_name)}</strong><br><span style="font-size:.7rem;color:var(--text)">${escapeHtml(m.model_id)}</span></td>
+      <td>${escapeHtml(m.category)}</td>
+      <td><span class="badge ${m.backend}">${m.backend === 'cloud' ? '☁️ 云端' : m.backend === 'mac' ? '💻 Mac' : '🖥️ 本地'}</span></td>
+      <td><span class="badge ${m.is_active ? 'active' : 'inactive'}">${m.is_active ? '启用' : '禁用'}</span></td>
+      <td>${m.total_requests || 0}</td>
+      <td>
+        <button class="btn btn-sm btn-ghost" onclick="editModel('${m.id}')">编辑</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteModel('${m.id}')">删除</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text);padding:2rem">暂无模型</td></tr>';
+}
+
+function showAddModel() {
+  editingModelId = null;
+  document.getElementById('modelId').value = '';
+  document.getElementById('modelName').value = '';
+  document.getElementById('modelDesc').value = '';
+  document.getElementById('modelCategory').value = 'chat';
+  document.getElementById('modelBackend').value = 'cloud';
+  document.getElementById('modelHfId').value = '';
+  document.getElementById('modelModal').classList.add('show');
+}
+
+function editModel(modelId) {
+  const m = allModels.find(x => x.id === modelId);
+  if (!m) return;
+  editingModelId = modelId;
+  document.getElementById('modelId').value = m.model_id;
+  document.getElementById('modelName').value = m.display_name;
+  document.getElementById('modelDesc').value = m.description || '';
+  document.getElementById('modelCategory').value = m.category;
+  document.getElementById('modelBackend').value = m.backend;
+  document.getElementById('modelHfId').value = m.hf_model_id || '';
+  document.getElementById('modelModal').classList.add('show');
+}
+
+async function saveModel() {
+  const model = {
+    model_id: document.getElementById('modelId').value,
+    display_name: document.getElementById('modelName').value,
+    description: document.getElementById('modelDesc').value,
+    category: document.getElementById('modelCategory').value,
+    backend: document.getElementById('modelBackend').value,
+    hf_model_id: document.getElementById('modelHfId').value || null,
+    created_by: currentUser.id
+  };
+  if (editingModelId) model.id = editingModelId;
+  
+  await Admin.upsertModel(model);
+  closeModal('modelModal');
+  await loadModels();
+  await loadDashboard();
+}
+
+async function deleteModel(modelId) {
+  if (!confirm('确定删除这个模型？')) return;
+  await Admin.deleteModel(modelId);
+  await loadModels();
+  await loadDashboard();
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+function roleName(role) {
+  return { super_admin: '超级管理者', admin: '管理者', user: '用户' }[role] || role;
+}
+
+function escapeHtml(text) {
+  if (!text) return '—';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', (e) => {
+    if (e.target === o) o.classList.remove('show');
+  });
+});
+</script>
+</body>
+</html>
