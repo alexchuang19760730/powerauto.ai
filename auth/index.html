@@ -315,7 +315,7 @@ async function handleOAuth(provider) {
 // 已登录则跳转
 // ============================================================
 (async () => {
-  if (typeof Auth === "undefined") {
+  if (typeof Auth === 'undefined') {
     showMessage('⚠️ Supabase 未配置，请先设置 auth/config.js', 'error');
     return;
   }
